@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+         http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="1" author="yourname">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="locations" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createTable tableName="locations" schemaName="public">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="country" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(255)"/>
+            <column name="location_code" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Similarly for the 'transportations' table -->
+    <changeSet id="2" author="yourname">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transportations" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createTable tableName="transportations" schemaName="public">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="origin_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="destination_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="transportations"
+                baseColumnNames="origin_id"
+                referencedTableName="locations"
+                referencedColumnNames="id"
+                constraintName="fk_transportation_origin"
+                baseSchemaName="public"
+                referencedSchemaName="public"/>
+        <addForeignKeyConstraint
+                baseTableName="transportations"
+                baseColumnNames="destination_id"
+                referencedTableName="locations"
+                referencedColumnNames="id"
+                constraintName="fk_transportation_destination"
+                baseSchemaName="public"
+                referencedSchemaName="public"/>
+    </changeSet>
+
+    <!-- And for the 'transportation_operating_days' table -->
+    <changeSet id="3" author="yourname">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transportation_operating_days" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createTable tableName="transportation_operating_days" schemaName="public">
+            <column name="transportation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operating_day" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey
+                tableName="transportation_operating_days"
+                schemaName="public"
+                columnNames="transportation_id, operating_day"
+                constraintName="pk_operating_days"/>
+        <addForeignKeyConstraint
+                baseTableName="transportation_operating_days"
+                baseColumnNames="transportation_id"
+                referencedTableName="transportations"
+                referencedColumnNames="id"
+                constraintName="fk_operating_days_transportation"
+                baseSchemaName="public"
+                referencedSchemaName="public"/>
+    </changeSet>
+
+</databaseChangeLog>
