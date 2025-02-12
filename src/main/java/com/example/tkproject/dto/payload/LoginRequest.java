@@ -1,4 +1,4 @@
-package com.example.tkproject.payload;
+package com.example.tkproject.dto.payload;
 
 import lombok.Data;
 

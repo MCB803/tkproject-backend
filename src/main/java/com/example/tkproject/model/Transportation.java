@@ -1,10 +1,11 @@
 package com.example.tkproject.model;
 
 import jakarta.persistence.*;
-
+import lombok.Data;
 import java.util.HashSet;
 import java.util.Set;
 
+@Data
 @Entity
 @Table(name = "transportations")
 public class Transportation {
@@ -42,43 +43,4 @@ public class Transportation {
         this.operatingDays = operatingDays;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Location getOrigin() {
-        return origin;
-    }
-
-    public void setOrigin(Location origin) {
-        this.origin = origin;
-    }
-
-    public Location getDestination() {
-        return destination;
-    }
-
-    public void setDestination(Location destination) {
-        this.destination = destination;
-    }
-
-    public TransportationType getType() {
-        return type;
-    }
-
-    public void setType(TransportationType type) {
-        this.type = type;
-    }
-
-    public Set<Integer> getOperatingDays() {
-        return operatingDays;
-    }
-
-    public void setOperatingDays(Set<Integer> operatingDays) {
-        this.operatingDays = operatingDays;
-    }
 }

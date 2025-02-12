@@ -1,6 +1,6 @@
 package com.example.tkproject.config;
 
-import com.example.tkproject.security.JwtUtil;
+import com.example.tkproject.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,8 +27,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String jwt = authHeader.substring(7);
-            if (jwtUtil.validateJwtToken(jwt)) {
-                String username = jwtUtil.getUsernameFromJwt(jwt);
+            if (jwtUtil.validateToken(jwt)) {
+                String username = jwtUtil.getUsernameFromToken(jwt);
                 // For simplicity, we create an authentication token with no authorities.
                 // In a production system, you should parse and set the roles.
                 UsernamePasswordAuthenticationToken authentication =

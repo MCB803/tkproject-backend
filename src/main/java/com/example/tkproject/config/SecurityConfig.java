@@ -4,15 +4,10 @@ import com.example.tkproject.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -42,7 +37,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/locations/**", "/api/transportations/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                .httpBasic(withDefaults()); // If you still want basic auth on other endpoints
+                .httpBasic(withDefaults())
+                .headers(headers -> headers
+                        .cacheControl(cache -> cache.disable())
+                        .addHeaderWriter((request, response) -> {
+                            if(request.getRequestURI().startsWith("/api/locations")) {
+                                response.setHeader("Cache-Control", "max-age=3600, public");
+                            }
+                        })
+                );
         return http.build();
     }
 

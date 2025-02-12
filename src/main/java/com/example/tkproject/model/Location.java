@@ -1,7 +1,9 @@
 package com.example.tkproject.model;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "locations")
 public class Location {
@@ -28,43 +30,6 @@ public class Location {
         this.locationCode = locationCode;
     }
 
-    // Getters and setters
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getCountry() {
-        return country;
-    }
-
-    public void setCountry(String country) {
-        this.country = country;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public String getLocationCode() {
-        return locationCode;
-    }
-
-    public void setLocationCode(String locationCode) {
-        this.locationCode = locationCode;
-    }
 
     // For simplicity in comparisons in our route logic,
     // we assume that two Location objects are equal if their locationCode is equal.
