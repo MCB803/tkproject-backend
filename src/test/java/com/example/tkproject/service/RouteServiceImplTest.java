@@ -1,5 +1,7 @@
 package com.example.tkproject.service;
 
+import com.example.tkproject.dto.TransportationDTO;
+import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
 import com.example.tkproject.model.TransportationType;
@@ -7,20 +9,22 @@ import com.example.tkproject.repository.LocationRepository;
 import com.example.tkproject.repository.TransportationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class RouteServiceImplTest {
+@ExtendWith(MockitoExtension.class)
+class RouteServiceImplTest {
 
     @Mock
     private LocationRepository locationRepository;
@@ -33,56 +37,48 @@ public class RouteServiceImplTest {
 
     private Location origin;
     private Location destination;
-    private Transportation directFlight;
-    private LocalDate tripDate;
+    private Transportation flight;
 
     @BeforeEach
-    public void setUp() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "testUser",
-                        "testPassword",
-                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-                )
-        );
+    void setUp() {
+        origin = new Location("Istanbul Airport", "Turkey", "Istanbul", "IST");
+        destination = new Location("New York JFK", "USA", "New York", "JFK");
 
-        MockitoAnnotations.openMocks(this);
-
-        // Set up test data
-        origin = new Location("Origin Airport", "USA", "CityA", "OAP");
-        destination = new Location("Destination Airport", "USA", "CityB", "DAP");
-        // For the sake of the test, assume the tripDate is such that the day of week is 3 (e.g. Wednesday)
-        tripDate = LocalDate.of(2025, 3, 12); // Check what day of week this is; for example, let’s assume it equals 3.
-
-        // Create a direct flight available on that day
-        directFlight = new Transportation(origin, destination, TransportationType.FLIGHT, new HashSet<>(Collections.singletonList(tripDate.getDayOfWeek().getValue())));
+        flight = new Transportation();
+        flight.setType(TransportationType.FLIGHT);
+        flight.setOrigin(origin);
+        flight.setDestination(destination);
+        flight.setOperatingDays(Set.of(1, 2, 3, 4, 5, 6, 7)); // All days
     }
 
     @Test
-    public void testFindRoutes_DirectFlight() {
-        // Set up repository behavior
-        when(locationRepository.findByLocationCode("OAP")).thenReturn(Optional.of(origin));
-        when(locationRepository.findByLocationCode("DAP")).thenReturn(Optional.of(destination));
-        when(transportationRepository.findAll()).thenReturn(Collections.singletonList(directFlight));
+    void findRoutes_ShouldReturnRoutes() {
+        when(locationRepository.findByLocationCode("IST")).thenReturn(Optional.of(origin));
+        when(locationRepository.findByLocationCode("JFK")).thenReturn(Optional.of(destination));
+        when(transportationRepository.findAll()).thenReturn(List.of(flight));
 
-        // Call the service
-        List<List<Transportation>> routes = routeService.findRoutes("OAP", "DAP", tripDate);
+        List<List<TransportationDTO>> routes = routeService.findRoutes("IST", "JFK", LocalDate.of(2025, 3, 12));
 
-        // Verify results
         assertNotNull(routes);
+        assertFalse(routes.isEmpty());
         assertEquals(1, routes.size());
-        assertEquals(1, routes.get(0).size());
-        assertEquals(TransportationType.FLIGHT, routes.get(0).get(0).getType());
-        verify(locationRepository, times(1)).findByLocationCode("OAP");
-        verify(locationRepository, times(1)).findByLocationCode("DAP");
+        verify(locationRepository, times(1)).findByLocationCode("IST");
+        verify(locationRepository, times(1)).findByLocationCode("JFK");
+        verify(transportationRepository, times(1)).findAll();
     }
 
     @Test
-    public void testFindRoutes_OriginNotFound() {
-        when(locationRepository.findByLocationCode("OAP")).thenReturn(Optional.empty());
-        Exception exception = assertThrows(RuntimeException.class, () -> {
-            routeService.findRoutes("OAP", "DAP", tripDate);
-        });
-        assertTrue(exception.getMessage().contains("Origin not found"));
+    void findRoutes_ShouldThrowException_WhenOriginNotFound() {
+        when(locationRepository.findByLocationCode("IST")).thenReturn(Optional.empty());
+
+        assertThrows(RouteServiceException.class, () -> routeService.findRoutes("IST", "JFK", LocalDate.of(2025, 3, 12)));
+    }
+
+    @Test
+    void findRoutes_ShouldThrowException_WhenDestinationNotFound() {
+        when(locationRepository.findByLocationCode("IST")).thenReturn(Optional.of(origin));
+        when(locationRepository.findByLocationCode("JFK")).thenReturn(Optional.empty());
+
+        assertThrows(RouteServiceException.class, () -> routeService.findRoutes("IST", "JFK", LocalDate.of(2025, 3, 12)));
     }
 }

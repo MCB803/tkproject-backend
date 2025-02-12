@@ -1,24 +1,23 @@
 package com.example.tkproject.service;
 
+import com.example.tkproject.dto.LocationDTO;
+import com.example.tkproject.exception.ResourceNotFoundException;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.repository.LocationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class LocationServiceImplTest {
 
     @Mock
@@ -27,58 +26,77 @@ class LocationServiceImplTest {
     @InjectMocks
     private LocationServiceImpl locationService;
 
+    private Location location;
+    private LocationDTO locationDTO;
+
     @BeforeEach
     void setUp() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "testUser",
-                        "testPassword",
-                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-                ));
-        MockitoAnnotations.openMocks(this);
+        location = new Location("Istanbul Airport", "Turkey", "Istanbul", "IST");
+        location.setId(1L);
+
+        locationDTO = new LocationDTO(1L, "Istanbul Airport", "Turkey", "Istanbul", "IST");
     }
 
     @Test
-    void testFindAll() {
-        // Arrange
-        List<Location> expected = Arrays.asList(
-                new Location("Location A", "CountryA", "CityA", "CODEA"),
-                new Location("Location B", "CountryB", "CityB", "CODEB")
-        );
-        when(locationRepository.findAll()).thenReturn(expected);
+    void findAll_ShouldReturnLocationList() {
+        when(locationRepository.findAll()).thenReturn(List.of(location));
 
-        // Act
-        List<Location> locations = locationService.findAll();
+        List<LocationDTO> result = locationService.findAll();
 
-        // Assert
-        assertThat(locations).hasSize(2).containsExactlyElementsOf(expected);
+        assertFalse(result.isEmpty());
+        assertEquals(1, result.size());
+        assertEquals("IST", result.get(0).getLocationCode());
         verify(locationRepository, times(1)).findAll();
     }
 
     @Test
-    void testFindByIdFound() {
-        // Arrange
-        Location location = new Location("Location A", "CountryA", "CityA", "CODEA");
+    void findById_ShouldReturnLocation() {
         when(locationRepository.findById(1L)).thenReturn(Optional.of(location));
 
-        // Act
-        Optional<Location> result = locationService.findById(1L);
+        LocationDTO result = locationService.findById(1L);
 
-        // Assert
-        assertThat(result).isPresent().contains(location);
+        assertNotNull(result);
+        assertEquals("IST", result.getLocationCode());
         verify(locationRepository, times(1)).findById(1L);
     }
 
     @Test
-    void testUpdateNotFound() {
-        // Arrange
-        when(locationRepository.findById(1L)).thenReturn(Optional.empty());
+    void findById_ShouldThrowException_WhenNotFound() {
+        when(locationRepository.findById(2L)).thenReturn(Optional.empty());
 
-        // Act & Assert
-        Exception exception = assertThrows(RuntimeException.class, () ->
-                locationService.update(1L, new Location("New", "NewCountry", "NewCity", "NEWCODE"))
-        );
-        assertThat(exception.getMessage()).contains("Location not found with id");
+        assertThrows(ResourceNotFoundException.class, () -> locationService.findById(2L));
+    }
+
+    @Test
+    void create_ShouldSaveLocation() {
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
+        LocationDTO result = locationService.create(locationDTO);
+
+        assertNotNull(result);
+        assertEquals("IST", result.getLocationCode());
+        verify(locationRepository, times(1)).save(any(Location.class));
+    }
+
+    @Test
+    void update_ShouldUpdateLocation() {
+        when(locationRepository.findById(1L)).thenReturn(Optional.of(location));
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
+        LocationDTO result = locationService.update(1L, locationDTO);
+
+        assertNotNull(result);
+        assertEquals("IST", result.getLocationCode());
         verify(locationRepository, times(1)).findById(1L);
+        verify(locationRepository, times(1)).save(any(Location.class));
+    }
+
+    @Test
+    void delete_ShouldRemoveLocation() {
+        when(locationRepository.existsById(1L)).thenReturn(true);
+        doNothing().when(locationRepository).deleteById(1L);
+
+        assertDoesNotThrow(() -> locationService.delete(1L));
+        verify(locationRepository, times(1)).deleteById(1L);
     }
 }

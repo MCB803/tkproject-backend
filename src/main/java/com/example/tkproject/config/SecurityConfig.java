@@ -40,11 +40,6 @@ public class SecurityConfig {
                 .httpBasic(withDefaults())
                 .headers(headers -> headers
                         .cacheControl(cache -> cache.disable())
-                        .addHeaderWriter((request, response) -> {
-                            if(request.getRequestURI().startsWith("/api/locations")) {
-                                response.setHeader("Cache-Control", "max-age=3600, public");
-                            }
-                        })
                 );
         return http.build();
     }

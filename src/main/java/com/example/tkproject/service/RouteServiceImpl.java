@@ -1,11 +1,13 @@
 package com.example.tkproject.service;
 
+import com.example.tkproject.dto.TransportationDTO;
 import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
 import com.example.tkproject.model.TransportationType;
 import com.example.tkproject.repository.LocationRepository;
 import com.example.tkproject.repository.TransportationRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,12 +19,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 public class RouteServiceImpl implements RouteService {
 
     private static final Logger logger = LoggerFactory.getLogger(RouteServiceImpl.class);
-
     private final LocationRepository locationRepository;
     private final TransportationRepository transportationRepository;
 
@@ -37,122 +39,65 @@ public class RouteServiceImpl implements RouteService {
      */
     @Override
     @Cacheable(value = "routesCache", key = "#originCode + '_' + #destinationCode + '_' + #tripDate")
-    public List<List<Transportation>> findRoutes(String originCode, String destinationCode, LocalDate tripDate) {
+    public List<List<TransportationDTO>> findRoutes(String originCode, String destinationCode, LocalDate tripDate) {
         try {
-            // Log the start of the route search, including the current user
             String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
             logger.info("User {} is searching routes from {} to {} on {}", currentUser, originCode, destinationCode, tripDate);
-            int dayOfWeek = tripDate.getDayOfWeek().getValue(); // Monday = 1, ..., Sunday = 7
 
-            // Lookup origin and destination locations; if not found, log and throw an exception.
+            int dayOfWeek = tripDate.getDayOfWeek().getValue();
+
+            // Fetch locations and validate
             Location origin = locationRepository.findByLocationCode(originCode)
-                    .orElseThrow(() -> {
-                        String msg = "Origin not found: " + originCode;
-                        logger.error(msg);
-                        return new RouteServiceException(msg);
-                    });
+                    .orElseThrow(() -> new RouteServiceException("Origin not found: " + originCode));
 
             Location destination = locationRepository.findByLocationCode(destinationCode)
-                    .orElseThrow(() -> {
-                        String msg = "Destination not found: " + destinationCode;
-                        logger.error(msg);
-                        return new RouteServiceException(msg);
-                    });
+                    .orElseThrow(() -> new RouteServiceException("Destination not found: " + destinationCode));
 
-            // Retrieve all transportation records
+            // Fetch all transportation options
             List<Transportation> allTransports = transportationRepository.findAll();
             logger.debug("Total transportation records found: {}", allTransports.size());
 
-            List<List<Transportation>> validRoutes = new ArrayList<>();
+            // Ensure lazy fields are loaded
+            allTransports.forEach(t -> Hibernate.initialize(t.getOperatingDays()));
+
+            // Define filter predicate for valid operating days
             Predicate<Transportation> availableOnDay = t -> t.getOperatingDays().contains(dayOfWeek);
 
-            // 1. Direct Flight: [FLIGHT]
-            for (Transportation t : allTransports) {
-                if (availableOnDay.test(t)
-                        && t.getOrigin().equals(origin)
-                        && t.getDestination().equals(destination)
-                        && t.getType() == TransportationType.FLIGHT) {
-                    logger.debug("Direct flight found: {}", t);
-                    validRoutes.add(Collections.singletonList(t));
-                }
-            }
+            List<List<Transportation>> validRoutes = new ArrayList<>();
 
-            // 2. Pre-flight transfer + Flight: [non-FLIGHT, FLIGHT]
+            // 🚀 **Optimized Route Search**
             for (Transportation t1 : allTransports) {
-                if (availableOnDay.test(t1)
-                        && t1.getOrigin().equals(origin)
-                        && t1.getType() != TransportationType.FLIGHT) {
+                if (!availableOnDay.test(t1) || !t1.getOrigin().equals(origin)) continue;
 
-                    Location intermediate = t1.getDestination();
-                    if (intermediate.equals(destination)) continue;
-
-                    for (Transportation t2 : allTransports) {
-                        if (availableOnDay.test(t2)
-                                && t2.getOrigin().equals(intermediate)
-                                && t2.getDestination().equals(destination)
-                                && t2.getType() == TransportationType.FLIGHT) {
-                            logger.debug("Pre-flight transfer + Flight route found: {} then {}", t1, t2);
-                            List<Transportation> route = new ArrayList<>();
-                            route.add(t1);
-                            route.add(t2);
-                            validRoutes.add(route);
-                        }
+                if (t1.getDestination().equals(destination)) {
+                    // Case 1: Direct Flight
+                    if (t1.getType() == TransportationType.FLIGHT) {
+                        logger.debug("Direct flight found: {}", t1);
+                        validRoutes.add(Collections.singletonList(t1));
                     }
-                }
-            }
-
-            // 3. Flight + Post-flight transfer: [FLIGHT, non-FLIGHT]
-            for (Transportation t1 : allTransports) {
-                if (availableOnDay.test(t1)
-                        && t1.getOrigin().equals(origin)
-                        && t1.getType() == TransportationType.FLIGHT) {
-
-                    Location intermediate = t1.getDestination();
-                    if (intermediate.equals(destination)) continue;
-
+                } else {
                     for (Transportation t2 : allTransports) {
-                        if (availableOnDay.test(t2)
-                                && t2.getOrigin().equals(intermediate)
-                                && t2.getDestination().equals(destination)
-                                && t2.getType() != TransportationType.FLIGHT) {
-                            logger.debug("Flight + Post-flight transfer route found: {} then {}", t1, t2);
-                            List<Transportation> route = new ArrayList<>();
-                            route.add(t1);
-                            route.add(t2);
-                            validRoutes.add(route);
-                        }
-                    }
-                }
-            }
+                        if (!availableOnDay.test(t2) || !t2.getOrigin().equals(t1.getDestination())) continue;
 
-            // 4. Pre-flight + Flight + Post-flight transfer: [non-FLIGHT, FLIGHT, non-FLIGHT]
-            for (Transportation t1 : allTransports) {
-                if (availableOnDay.test(t1)
-                        && t1.getOrigin().equals(origin)
-                        && t1.getType() != TransportationType.FLIGHT) {
-
-                    Location intermediate1 = t1.getDestination();
-                    if (intermediate1.equals(destination)) continue;
-
-                    for (Transportation t2 : allTransports) {
-                        if (availableOnDay.test(t2)
-                                && t2.getOrigin().equals(intermediate1)
-                                && t2.getType() == TransportationType.FLIGHT) {
-
-                            Location intermediate2 = t2.getDestination();
-                            if (intermediate2.equals(destination)) continue;
-
+                        if (t2.getDestination().equals(destination)) {
+                            // Case 2: Pre-flight Transfer + Flight
+                            if (t1.getType() != TransportationType.FLIGHT && t2.getType() == TransportationType.FLIGHT) {
+                                logger.debug("Pre-flight transfer + Flight route found: {} then {}", t1, t2);
+                                validRoutes.add(List.of(t1, t2));
+                            }
+                            // Case 3: Flight + Post-flight Transfer
+                            else if (t1.getType() == TransportationType.FLIGHT && t2.getType() != TransportationType.FLIGHT) {
+                                logger.debug("Flight + Post-flight transfer route found: {} then {}", t1, t2);
+                                validRoutes.add(List.of(t1, t2));
+                            }
+                        } else {
                             for (Transportation t3 : allTransports) {
-                                if (availableOnDay.test(t3)
-                                        && t3.getOrigin().equals(intermediate2)
-                                        && t3.getDestination().equals(destination)
-                                        && t3.getType() != TransportationType.FLIGHT) {
-                                    logger.debug("Pre-flight + Flight + Post-flight route found: {} then {} then {}", t1, t2, t3);
-                                    List<Transportation> route = new ArrayList<>();
-                                    route.add(t1);
-                                    route.add(t2);
-                                    route.add(t3);
-                                    validRoutes.add(route);
+                                if (!availableOnDay.test(t3) || !t3.getOrigin().equals(t2.getDestination()) || !t3.getDestination().equals(destination)) continue;
+
+                                // Case 4: Pre-flight + Flight + Post-flight Transfer
+                                if (t1.getType() != TransportationType.FLIGHT && t2.getType() == TransportationType.FLIGHT && t3.getType() != TransportationType.FLIGHT) {
+                                    logger.debug("Pre-flight + Flight + Post-flight transfer route found: {} then {} then {}", t1, t2, t3);
+                                    validRoutes.add(List.of(t1, t2, t3));
                                 }
                             }
                         }
@@ -160,10 +105,14 @@ public class RouteServiceImpl implements RouteService {
                 }
             }
 
-            // Enforce the rule: each valid route must contain exactly one flight.
+            // Enforce rule: Each route must contain exactly **one** flight
             validRoutes.removeIf(route -> route.stream().filter(t -> t.getType() == TransportationType.FLIGHT).count() != 1);
             logger.info("Total valid routes found: {}", validRoutes.size());
-            return validRoutes;
+
+            // Convert to DTOs
+            return validRoutes.stream()
+                    .map(route -> route.stream().map(TransportationDTO::fromEntity).collect(Collectors.toList()))
+                    .collect(Collectors.toList());
         } catch (Exception ex) {
             logger.error("Error finding routes: {}", ex.getMessage(), ex);
             throw new RouteServiceException("Error finding routes", ex);

@@ -1,96 +1,116 @@
 package com.example.tkproject.controller;
 
+import com.example.tkproject.dto.ApiResponse;
 import com.example.tkproject.dto.LocationDTO;
-import com.example.tkproject.model.Location;
-import com.example.tkproject.repository.LocationRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.tkproject.exception.ResourceNotFoundException;
+import com.example.tkproject.service.LocationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.ResponseEntity;
 
-import static org.hamcrest.Matchers.*;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-public class LocationControllerTest {
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-    @Autowired
+@ExtendWith(MockitoExtension.class)
+class LocationControllerTest {
+
     private MockMvc mockMvc;
 
-    @Autowired
-    private LocationRepository locationRepository;
+    @Mock
+    private LocationService locationService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @InjectMocks
+    private LocationController locationController;
 
-    private Location testLocation;
+    private LocationDTO locationDTO;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    public void setup() {
-        locationRepository.deleteAll();
-        testLocation = new Location("Test Airport", "TestCountry", "TestCity", "TST");
-        testLocation = locationRepository.save(testLocation);
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(locationController).build();
+
+        locationDTO = new LocationDTO(1L, "Istanbul Airport", "Turkey", "Istanbul", "IST");
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    public void testGetAllLocations() throws Exception {
+    void getAllLocations_ShouldReturnLocations() throws Exception {
+        List<LocationDTO> locations = List.of(locationDTO);
+        when(locationService.findAll()).thenReturn(locations);
+
         mockMvc.perform(get("/api/locations"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].locationCode", is("TST")));
+                .andExpect(jsonPath("$.data[0].name").value("Istanbul Airport"));
+
+        verify(locationService, times(1)).findAll();
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    public void testGetLocationById() throws Exception {
-        mockMvc.perform(get("/api/locations/{id}", testLocation.getId()))
+    void getLocationById_ShouldReturnLocation() throws Exception {
+        when(locationService.findById(1L)).thenReturn(locationDTO);
+
+        mockMvc.perform(get("/api/locations/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.locationCode", is("TST")));
+                .andExpect(jsonPath("$.data.name").value("Istanbul Airport"));
+
+        verify(locationService, times(1)).findById(1L);
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    public void testCreateLocation() throws Exception {
-        LocationDTO dto = new LocationDTO();
-        dto.setName("New Airport");
-        dto.setCountry("NewCountry");
-        dto.setCity("NewCity");
-        dto.setLocationCode("NEW");
+    void getLocationById_ShouldReturnNotFound_WhenLocationDoesNotExist() throws Exception {
+        when(locationService.findById(2L)).thenThrow(new ResourceNotFoundException("Location not found"));
+
+        mockMvc.perform(get("/api/locations/2"))
+                .andExpect(status().isNotFound());
+
+        verify(locationService, times(1)).findById(2L);
+    }
+
+    @Test
+    void createLocation_ShouldReturnCreatedLocation() throws Exception {
+        when(locationService.create(any(LocationDTO.class))).thenReturn(locationDTO);
 
         mockMvc.perform(post("/api/locations")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
+                        .content(objectMapper.writeValueAsString(locationDTO)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.locationCode", is("NEW")));
+                .andExpect(jsonPath("$.data.name").value("Istanbul Airport"));
+
+        verify(locationService, times(1)).create(any(LocationDTO.class));
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    public void testUpdateLocation() throws Exception {
-        LocationDTO dto = new LocationDTO();
-        dto.setName("Updated Airport");
-        dto.setCountry("UpdatedCountry");
-        dto.setCity("UpdatedCity");
-        dto.setLocationCode("UPD");
+    void updateLocation_ShouldReturnUpdatedLocation() throws Exception {
+        when(locationService.update(eq(1L), any(LocationDTO.class))).thenReturn(locationDTO);
 
-        mockMvc.perform(put("/api/locations/{id}", testLocation.getId())
+        mockMvc.perform(put("/api/locations/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
+                        .content(objectMapper.writeValueAsString(locationDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.locationCode", is("UPD")));
+                .andExpect(jsonPath("$.data.name").value("Istanbul Airport"));
+
+        verify(locationService, times(1)).update(eq(1L), any(LocationDTO.class));
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    public void testDeleteLocation() throws Exception {
-        mockMvc.perform(delete("/api/locations/{id}", testLocation.getId()))
+    void deleteLocation_ShouldReturnNoContent() throws Exception {
+        doNothing().when(locationService).delete(1L);
+
+        mockMvc.perform(delete("/api/locations/1"))
                 .andExpect(status().isNoContent());
+
+        verify(locationService, times(1)).delete(1L);
     }
 }

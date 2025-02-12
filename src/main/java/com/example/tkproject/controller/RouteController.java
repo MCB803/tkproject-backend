@@ -1,6 +1,8 @@
 package com.example.tkproject.controller;
 
 import com.example.tkproject.dto.ApiResponse;
+import com.example.tkproject.dto.LocationDTO;
+import com.example.tkproject.dto.TransportationDTO;
 import com.example.tkproject.exception.ErrorResponse;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
@@ -45,9 +47,9 @@ public class RouteController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tripDate) {
         try {
             logger.info("Fetching routes from {} to {} for date {}", originCode, destinationCode, tripDate);
-            List<List<Transportation>> routes = routeService.findRoutes(originCode, destinationCode, tripDate);
+            List<List<TransportationDTO>> routes = routeService.findRoutes(originCode, destinationCode, tripDate);
             logger.debug("Found {} routes", routes.size());
-            ApiResponse<List<List<Transportation>>> response = new ApiResponse<>(
+            ApiResponse<List<List<TransportationDTO>>> response = new ApiResponse<>(
                     HttpStatus.OK.value(),
                     "Routes fetched successfully",
                     routes
@@ -68,9 +70,9 @@ public class RouteController {
     public ResponseEntity<?> getAllLocations() {
         try {
             logger.info("Fetching all locations for routes");
-            List<Location> locations = locationService.findAll();
+            List<LocationDTO> locations = locationService.findAll();
             logger.debug("Found {} locations", locations.size());
-            ApiResponse<List<Location>> response = new ApiResponse<>(
+            ApiResponse<List<LocationDTO>> response = new ApiResponse<>(
                     HttpStatus.OK.value(),
                     "Locations fetched successfully",
                     locations
