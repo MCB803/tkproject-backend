@@ -1,7 +1,9 @@
 package com.example.tkproject.service;
 
-import com.example.tkproject.dto.TransportationDTO;
+import com.example.tkproject.dto.TransportationRequestDTO;
+import com.example.tkproject.dto.TransportationResponseDTO;
 import com.example.tkproject.exception.ResourceNotFoundException;
+import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.model.Transportation;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.TransportationType;
@@ -30,85 +32,88 @@ public class TransportationServiceImpl implements TransportationService {
         this.locationRepository = locationRepository;
     }
 
-    // Fetch all transportations as DTOs
     @Cacheable(value = "transportationsCache")
     @Override
-    public List<TransportationDTO> findAll() {
+    public List<TransportationResponseDTO> findAll() {
         logger.info("Fetching all transportations from the database.");
         return transportationRepository.findAll()
                 .stream()
-                .map(TransportationDTO::fromEntity)
+                .map(TransportationResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    // Fetch transportation by ID
     @Cacheable(value = "transportationCache", key = "#id")
     @Override
-    public TransportationDTO findById(Long id) {
+    public TransportationResponseDTO findById(Long id) {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
         logger.info("User {} fetching transportation with id: {}", currentUser, id);
         return transportationRepository.findById(id)
-                .map(TransportationDTO::fromEntity)
+                .map(TransportationResponseDTO::fromEntity)
                 .orElseThrow(() -> new ResourceNotFoundException("Transportation not found with id: " + id));
     }
 
-    // Create transportation (Convert DTO to Entity)
     @CacheEvict(value = "transportationsCache", allEntries = true)
     @Override
-    public TransportationDTO create(TransportationDTO transportationDTO) {
-        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-        logger.info("User {} is creating new transportation: {}", currentUser, transportationDTO);
+    public TransportationResponseDTO create(TransportationRequestDTO transportationDTO) {
 
-        // Convert DTO to Entity
+        if (transportationDTO.getOriginId().equals(transportationDTO.getDestinationId())) {
+            throw new RouteServiceException("Origin and destination must be different!");
+        }
+
         Transportation transportation = new Transportation();
         transportation.setType(TransportationType.valueOf(transportationDTO.getType()));
         transportation.setOperatingDays(transportationDTO.getOperatingDays());
 
-        // Fetch origin & destination from DB
-        Location origin = locationRepository.findById(transportationDTO.getOrigin().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Origin location not found with id: " + transportationDTO.getOrigin()));
+        Location origin = locationRepository.findById(transportationDTO.getOriginId())
+                .orElseThrow(() -> new ResourceNotFoundException("Origin location not found with id: " + transportationDTO.getOriginId()));
 
-        Location destination = locationRepository.findById(transportationDTO.getDestination().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Destination location not found with id: " + transportationDTO.getDestination()));
+        Location destination = locationRepository.findById(transportationDTO.getDestinationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination location not found with id: " + transportationDTO.getDestinationId()));
 
         transportation.setOrigin(origin);
         transportation.setDestination(destination);
 
         Transportation savedTransportation = transportationRepository.save(transportation);
-        return TransportationDTO.fromEntity(savedTransportation);
+
+        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        logger.info("User {} created new transportation: {}", currentUser, savedTransportation);
+
+        return TransportationResponseDTO.fromEntity(savedTransportation);
     }
 
-    // Update transportation (Convert DTO to Entity)
     @Caching(evict = {
             @CacheEvict(value = "transportationsCache", allEntries = true),
             @CacheEvict(value = "transportationCache", key = "#id")
     })
     @Override
-    public TransportationDTO update(Long id, TransportationDTO transportationDTO) {
-        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-        logger.info("User {} is updating transportation with id: {}", currentUser, id);
+    public TransportationResponseDTO update(Long id, TransportationRequestDTO transportationDTO) {
+
+        if (transportationDTO.getOriginId().equals(transportationDTO.getDestinationId())) {
+            throw new RouteServiceException("Origin and destination must be different!");
+        }
 
         Transportation existing = transportationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transportation not found with id: " + id));
 
-        // Fetch origin & destination from DB
-        Location origin = locationRepository.findById(transportationDTO.getOrigin().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Origin location not found with id: " + transportationDTO.getOrigin().getId()));
+        Location origin = locationRepository.findById(transportationDTO.getOriginId())
+                .orElseThrow(() -> new ResourceNotFoundException("Origin location not found with id: " + transportationDTO.getOriginId()));
 
-        Location destination = locationRepository.findById(transportationDTO.getDestination().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Destination location not found with id: " + transportationDTO.getDestination().getId()));
+        Location destination = locationRepository.findById(transportationDTO.getDestinationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination location not found with id: " + transportationDTO.getDestinationId()));
 
-        // Update fields from DTO
         existing.setType(TransportationType.valueOf(transportationDTO.getType()));
         existing.setOperatingDays(transportationDTO.getOperatingDays());
         existing.setOrigin(origin);
         existing.setDestination(destination);
 
         Transportation updatedTransportation = transportationRepository.save(existing);
-        return TransportationDTO.fromEntity(updatedTransportation);
+
+        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        logger.info("User {} updated transportation with id: {}", currentUser, id);
+
+        return TransportationResponseDTO.fromEntity(updatedTransportation);
     }
 
-    // Delete transportation
     @Caching(evict = {
             @CacheEvict(value = "transportationsCache", allEntries = true),
             @CacheEvict(value = "transportationCache", key = "#id")
@@ -116,7 +121,7 @@ public class TransportationServiceImpl implements TransportationService {
     @Override
     public void delete(Long id) {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-        logger.info("User {} is deleting transportation with id: {}", currentUser, id);
         transportationRepository.deleteById(id);
+        logger.info("User {} deleted transportation with id: {}", currentUser, id);
     }
 }

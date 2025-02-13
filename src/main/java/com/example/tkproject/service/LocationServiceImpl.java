@@ -64,6 +64,11 @@ public class LocationServiceImpl implements LocationService {
         location.setCity(locationDTO.getCity());
         location.setLocationCode(locationDTO.getLocationCode());
 
+        if (locationDTO.getLatitude() != null && locationDTO.getLongitude() != null) {
+            location.setLatitude(locationDTO.getLatitude());
+            location.setLongitude(locationDTO.getLongitude());
+        }
+
         Location savedLocation = locationRepository.save(location);
         return LocationDTO.fromEntity(savedLocation);
     }
@@ -78,11 +83,13 @@ public class LocationServiceImpl implements LocationService {
         Location existing = locationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + id));
 
-        // Update fields from DTO
         existing.setName(locationDTO.getName());
         existing.setCountry(locationDTO.getCountry());
         existing.setCity(locationDTO.getCity());
         existing.setLocationCode(locationDTO.getLocationCode());
+        existing.setLatitude(locationDTO.getLatitude());
+        existing.setLongitude(locationDTO.getLongitude());
+
 
         Location updatedLocation = locationRepository.save(existing);
         return LocationDTO.fromEntity(updatedLocation);

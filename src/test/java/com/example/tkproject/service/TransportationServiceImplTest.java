@@ -1,21 +1,27 @@
 package com.example.tkproject.service;
 
-import com.example.tkproject.dto.LocationDTO;
-import com.example.tkproject.dto.TransportationDTO;
+import com.example.tkproject.dto.TransportationRequestDTO;
+import com.example.tkproject.dto.TransportationResponseDTO;
 import com.example.tkproject.exception.ResourceNotFoundException;
+import com.example.tkproject.exception.RouteServiceException;
+import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
 import com.example.tkproject.model.TransportationType;
 import com.example.tkproject.repository.TransportationRepository;
+import com.example.tkproject.repository.LocationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
-import java.util.Set;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -26,87 +32,148 @@ class TransportationServiceImplTest {
     @Mock
     private TransportationRepository transportationRepository;
 
+    @Mock
+    private LocationRepository locationRepository;
+
     @InjectMocks
     private TransportationServiceImpl transportationService;
 
     private Transportation transportation;
-    private TransportationDTO transportationDTO;
-    private LocationDTO originDTO;
-    private LocationDTO destinationDTO;
+    private Location origin, destination;
+    private TransportationRequestDTO requestDTO;
 
     @BeforeEach
     void setUp() {
-        originDTO = new LocationDTO(1L, "Istanbul Airport", "Turkey", "Istanbul", "IST");
-        destinationDTO = new LocationDTO(2L, "New York JFK", "USA", "New York", "JFK");
+        // Mock authentication
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("testUser");
 
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        // Create mock locations
+        origin = new Location();
+        origin.setId(1L);
+        origin.setName("Istanbul Airport");
+
+        destination = new Location();
+        destination.setId(2L);
+        destination.setName("London Heathrow");
+
+        // Create mock transportation
         transportation = new Transportation();
-        transportation.setId(1L);
+        transportation.setId(10L);
         transportation.setType(TransportationType.FLIGHT);
-        transportation.setOperatingDays(Set.of(1, 3, 5));
+        transportation.setOperatingDays(Set.of(1, 2, 3));
+        transportation.setOrigin(origin);
+        transportation.setDestination(destination);
 
-        transportationDTO = new TransportationDTO(1L, originDTO, destinationDTO, "FLIGHT", Set.of(1, 3, 5));
+        // Create request DTO
+        requestDTO = new TransportationRequestDTO();
+        requestDTO.setOriginId(1L);
+        requestDTO.setDestinationId(2L);
+        requestDTO.setType("FLIGHT");
+        requestDTO.setOperatingDays(Set.of(1, 2, 3));
     }
 
     @Test
-    void findAll_ShouldReturnTransportationList() {
+    void findAll_ShouldReturnListOfTransportations() {
         when(transportationRepository.findAll()).thenReturn(List.of(transportation));
 
-        List<TransportationDTO> result = transportationService.findAll();
+        List<TransportationResponseDTO> result = transportationService.findAll();
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
-        assertEquals("FLIGHT", result.get(0).getType());
+        assertEquals("Istanbul Airport", result.get(0).getOrigin().getName());
+
         verify(transportationRepository, times(1)).findAll();
     }
 
     @Test
-    void findById_ShouldReturnTransportation() {
-        when(transportationRepository.findById(1L)).thenReturn(Optional.of(transportation));
+    void findById_ShouldReturnTransportation_WhenFound() {
+        when(transportationRepository.findById(10L)).thenReturn(Optional.of(transportation));
 
-        TransportationDTO result = transportationService.findById(1L);
+        TransportationResponseDTO result = transportationService.findById(10L);
 
         assertNotNull(result);
-        assertEquals("FLIGHT", result.getType());
-        verify(transportationRepository, times(1)).findById(1L);
+        assertEquals("Istanbul Airport", result.getOrigin().getName());
+
+        verify(transportationRepository, times(1)).findById(10L);
     }
 
     @Test
     void findById_ShouldThrowException_WhenNotFound() {
-        when(transportationRepository.findById(2L)).thenReturn(Optional.empty());
+        when(transportationRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> transportationService.findById(2L));
+        assertThrows(ResourceNotFoundException.class, () -> transportationService.findById(99L));
+
+        verify(transportationRepository, times(1)).findById(99L);
     }
 
     @Test
-    void create_ShouldSaveTransportation() {
-        when(transportationRepository.save(any(Transportation.class))).thenReturn(transportation);
+    void create_ShouldSaveAndReturnNewTransportation() {
+        when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(destination));
+        when(transportationRepository.save(any())).thenReturn(transportation);
 
-        TransportationDTO result = transportationService.create(transportationDTO);
+        TransportationResponseDTO result = transportationService.create(requestDTO);
 
         assertNotNull(result);
         assertEquals("FLIGHT", result.getType());
-        verify(transportationRepository, times(1)).save(any(Transportation.class));
+        assertEquals("Istanbul Airport", result.getOrigin().getName());
+
+        verify(transportationRepository, times(1)).save(any());
     }
 
     @Test
-    void update_ShouldModifyTransportation() {
-        when(transportationRepository.findById(1L)).thenReturn(Optional.of(transportation));
-        when(transportationRepository.save(any(Transportation.class))).thenReturn(transportation);
+    void create_ShouldThrowException_WhenOriginAndDestinationAreSame() {
+        requestDTO.setDestinationId(1L); // Same as origin
 
-        TransportationDTO result = transportationService.update(1L, transportationDTO);
+        assertThrows(RouteServiceException.class, () -> transportationService.create(requestDTO));
+    }
+
+    @Test
+    void update_ShouldModifyExistingTransportation() {
+        when(transportationRepository.findById(10L)).thenReturn(Optional.of(transportation));
+        when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(destination));
+        when(transportationRepository.save(any())).thenReturn(transportation);
+
+        TransportationResponseDTO result = transportationService.update(10L, requestDTO);
 
         assertNotNull(result);
         assertEquals("FLIGHT", result.getType());
-        verify(transportationRepository, times(1)).findById(1L);
-        verify(transportationRepository, times(1)).save(any(Transportation.class));
+        assertEquals("Istanbul Airport", result.getOrigin().getName());
+
+        verify(transportationRepository, times(1)).save(any());
+    }
+
+    @Test
+    void update_ShouldThrowException_WhenNotFound() {
+        when(transportationRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> transportationService.update(99L, requestDTO));
+
+        verify(transportationRepository, times(1)).findById(99L);
     }
 
     @Test
     void delete_ShouldRemoveTransportation() {
-        when(transportationRepository.existsById(1L)).thenReturn(true);
-        doNothing().when(transportationRepository).deleteById(1L);
+        when(transportationRepository.findById(10L)).thenReturn(Optional.of(transportation));
+        doNothing().when(transportationRepository).deleteById(10L);
 
-        assertDoesNotThrow(() -> transportationService.delete(1L));
-        verify(transportationRepository, times(1)).deleteById(1L);
+        transportationService.delete(10L);
+
+        verify(transportationRepository, times(1)).deleteById(10L);
+    }
+
+    @Test
+    void delete_ShouldThrowException_WhenNotFound() {
+        when(transportationRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> transportationService.delete(99L));
+
+        verify(transportationRepository, times(1)).findById(99L);
     }
 }

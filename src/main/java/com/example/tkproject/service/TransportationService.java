@@ -1,6 +1,8 @@
 package com.example.tkproject.service;
 
-import com.example.tkproject.dto.TransportationDTO;
+import com.example.tkproject.dto.TransportationRequestDTO;
+import com.example.tkproject.dto.TransportationResponseDTO;
+
 import java.util.List;
 
 public interface TransportationService {
@@ -8,21 +10,21 @@ public interface TransportationService {
      * Retrieves all transportations as DTOs.
      * @return list of TransportationDTOs
      */
-    List<TransportationDTO> findAll();
+    List<TransportationResponseDTO> findAll();
 
     /**
      * Finds a transportation by ID.
      * @param id the transportation ID
      * @return TransportationDTO if found
      */
-    TransportationDTO findById(Long id);
+    TransportationResponseDTO findById(Long id);
 
     /**
      * Creates a new transportation entry.
      * @param transportationDTO the transportation details
      * @return the created TransportationDTO
      */
-    TransportationDTO create(TransportationDTO transportationDTO);
+    TransportationResponseDTO create(TransportationRequestDTO transportationDTO);
 
     /**
      * Updates an existing transportation entry.
@@ -30,7 +32,7 @@ public interface TransportationService {
      * @param transportationDTO  the updated transportation details
      * @return the updated TransportationDTO
      */
-    TransportationDTO update(Long id, TransportationDTO transportationDTO);
+    TransportationResponseDTO update(Long id, TransportationRequestDTO transportationDTO);
 
     /**
      * Deletes a transportation by ID.

@@ -16,8 +16,14 @@ public class Location {
     private String country;
     private String city;
 
-    @Column(name = "location_code", nullable = false, unique = true)
+    @Column(name = "location_code")
     private String locationCode;
+
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
 
     // Constructors, getters, and setters
     public Location() {

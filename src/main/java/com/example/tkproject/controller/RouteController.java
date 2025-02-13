@@ -2,13 +2,11 @@ package com.example.tkproject.controller;
 
 import com.example.tkproject.dto.ApiResponse;
 import com.example.tkproject.dto.LocationDTO;
-import com.example.tkproject.dto.TransportationDTO;
+import com.example.tkproject.dto.TransportationResponseDTO;
 import com.example.tkproject.exception.ErrorResponse;
-import com.example.tkproject.model.Location;
-import com.example.tkproject.model.Transportation;
 import com.example.tkproject.service.LocationService;
 import com.example.tkproject.service.RouteService;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -42,14 +40,14 @@ public class RouteController {
      */
     @GetMapping
     public ResponseEntity<?> getRoutes(
-            @RequestParam @NotBlank(message = "Origin code must not be blank") String originCode,
-            @RequestParam @NotBlank(message = "Destination code must not be blank") String destinationCode,
+            @RequestParam @NotNull(message = "Origin id must not be blank") Long originId,
+            @RequestParam @NotNull(message = "Destination id must not be blank") Long destinationId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tripDate) {
         try {
-            logger.info("Fetching routes from {} to {} for date {}", originCode, destinationCode, tripDate);
-            List<List<TransportationDTO>> routes = routeService.findRoutes(originCode, destinationCode, tripDate);
+            logger.info("Fetching routes from {} to {} for date {}", originId, destinationId, tripDate);
+            List<List<TransportationResponseDTO>> routes = routeService.findRoutes(originId, destinationId, tripDate);
             logger.debug("Found {} routes", routes.size());
-            ApiResponse<List<List<TransportationDTO>>> response = new ApiResponse<>(
+            ApiResponse<List<List<TransportationResponseDTO>>> response = new ApiResponse<>(
                     HttpStatus.OK.value(),
                     "Routes fetched successfully",
                     routes

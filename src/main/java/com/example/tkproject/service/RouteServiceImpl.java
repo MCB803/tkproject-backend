@@ -1,6 +1,7 @@
 package com.example.tkproject.service;
 
-import com.example.tkproject.dto.TransportationDTO;
+import com.example.tkproject.dto.TransportationRequestDTO;
+import com.example.tkproject.dto.TransportationResponseDTO;
 import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
@@ -35,23 +36,27 @@ public class RouteServiceImpl implements RouteService {
 
     /**
      * Finds all valid routes from origin to destination on the given trip date.
-     * The result is cached using a key composed of originCode, destinationCode, and tripDate.
+     * The result is cached using a key composed of originId, destinationId, and tripDate.
      */
     @Override
-    @Cacheable(value = "routesCache", key = "#originCode + '_' + #destinationCode + '_' + #tripDate")
-    public List<List<TransportationDTO>> findRoutes(String originCode, String destinationCode, LocalDate tripDate) {
+    @Cacheable(value = "routesCache", key = "#originId + '_' + #destinationId + '_' + #tripDate")
+    public List<List<TransportationResponseDTO>> findRoutes(Long originId, Long destinationId, LocalDate tripDate) {
         try {
             String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-            logger.info("User {} is searching routes from {} to {} on {}", currentUser, originCode, destinationCode, tripDate);
+            logger.info("User {} is searching routes from {} to {} on {}", currentUser, originId, destinationId, tripDate);
+
+            if (originId.equals(destinationId)) {
+                throw new RouteServiceException("Origin and destination must be different!");
+            }
 
             int dayOfWeek = tripDate.getDayOfWeek().getValue();
 
-            // Fetch locations and validate
-            Location origin = locationRepository.findByLocationCode(originCode)
-                    .orElseThrow(() -> new RouteServiceException("Origin not found: " + originCode));
+            // Fetch locations by ID and validate
+            Location origin = locationRepository.findById(originId)
+                    .orElseThrow(() -> new RouteServiceException("Origin not found with ID: " + originId));
 
-            Location destination = locationRepository.findByLocationCode(destinationCode)
-                    .orElseThrow(() -> new RouteServiceException("Destination not found: " + destinationCode));
+            Location destination = locationRepository.findById(destinationId)
+                    .orElseThrow(() -> new RouteServiceException("Destination not found with ID: " + destinationId));
 
             // Fetch all transportation options
             List<Transportation> allTransports = transportationRepository.findAll();
@@ -67,9 +72,9 @@ public class RouteServiceImpl implements RouteService {
 
             // 🚀 **Optimized Route Search**
             for (Transportation t1 : allTransports) {
-                if (!availableOnDay.test(t1) || !t1.getOrigin().equals(origin)) continue;
+                if (!availableOnDay.test(t1) || !t1.getOrigin().getId().equals(originId)) continue;
 
-                if (t1.getDestination().equals(destination)) {
+                if (t1.getDestination().getId().equals(destinationId)) {
                     // Case 1: Direct Flight
                     if (t1.getType() == TransportationType.FLIGHT) {
                         logger.debug("Direct flight found: {}", t1);
@@ -77,9 +82,9 @@ public class RouteServiceImpl implements RouteService {
                     }
                 } else {
                     for (Transportation t2 : allTransports) {
-                        if (!availableOnDay.test(t2) || !t2.getOrigin().equals(t1.getDestination())) continue;
+                        if (!availableOnDay.test(t2) || !t2.getOrigin().getId().equals(t1.getDestination().getId())) continue;
 
-                        if (t2.getDestination().equals(destination)) {
+                        if (t2.getDestination().getId().equals(destinationId)) {
                             // Case 2: Pre-flight Transfer + Flight
                             if (t1.getType() != TransportationType.FLIGHT && t2.getType() == TransportationType.FLIGHT) {
                                 logger.debug("Pre-flight transfer + Flight route found: {} then {}", t1, t2);
@@ -92,7 +97,7 @@ public class RouteServiceImpl implements RouteService {
                             }
                         } else {
                             for (Transportation t3 : allTransports) {
-                                if (!availableOnDay.test(t3) || !t3.getOrigin().equals(t2.getDestination()) || !t3.getDestination().equals(destination)) continue;
+                                if (!availableOnDay.test(t3) || !t3.getOrigin().getId().equals(t2.getDestination().getId()) || !t3.getDestination().getId().equals(destinationId)) continue;
 
                                 // Case 4: Pre-flight + Flight + Post-flight Transfer
                                 if (t1.getType() != TransportationType.FLIGHT && t2.getType() == TransportationType.FLIGHT && t3.getType() != TransportationType.FLIGHT) {
@@ -105,13 +110,11 @@ public class RouteServiceImpl implements RouteService {
                 }
             }
 
-            // Enforce rule: Each route must contain exactly **one** flight
             validRoutes.removeIf(route -> route.stream().filter(t -> t.getType() == TransportationType.FLIGHT).count() != 1);
             logger.info("Total valid routes found: {}", validRoutes.size());
 
-            // Convert to DTOs
             return validRoutes.stream()
-                    .map(route -> route.stream().map(TransportationDTO::fromEntity).collect(Collectors.toList()))
+                    .map(route -> route.stream().map(TransportationResponseDTO::fromEntity).collect(Collectors.toList()))
                     .collect(Collectors.toList());
         } catch (Exception ex) {
             logger.error("Error finding routes: {}", ex.getMessage(), ex);
