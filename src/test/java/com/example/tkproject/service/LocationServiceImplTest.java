@@ -43,7 +43,7 @@ class LocationServiceImplTest {
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
         SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
+        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         // Sample location setup
@@ -63,7 +63,7 @@ class LocationServiceImplTest {
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
-        assertEquals("IST", result.get(0).getLocationCode());
+        assertEquals("IST", result.getFirst().getLocationCode());
         verify(locationRepository, times(1)).findAll();
     }
 
@@ -153,16 +153,16 @@ class LocationServiceImplTest {
 
     @Test
     void delete_ShouldRemoveLocation_WhenExists() {
-        when(locationRepository.existsById(1L)).thenReturn(true);
+        when(locationRepository.findById(1L)).thenReturn(Optional.of(location));
         doNothing().when(locationRepository).deleteById(1L);
-
         assertDoesNotThrow(() -> locationService.delete(1L));
+
         verify(locationRepository, times(1)).deleteById(1L);
     }
 
     @Test
     void delete_ShouldThrowException_WhenLocationNotFound() {
-        when(locationRepository.existsById(99L)).thenReturn(false);
+        when(locationRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> locationService.delete(99L));
     }

@@ -101,6 +101,10 @@ public class LocationServiceImpl implements LocationService {
     public void delete(Long id) {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
         logger.info("User {} is deleting location with id: {}", currentUser, id);
+
+        locationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + id));
+
         locationRepository.deleteById(id);
     }
 }

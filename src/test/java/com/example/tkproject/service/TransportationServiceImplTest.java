@@ -46,10 +46,10 @@ class TransportationServiceImplTest {
     void setUp() {
         // Mock authentication
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
+        lenient().when(authentication.getName()).thenReturn("testUser");
 
         SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
+        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         // Create mock locations
@@ -85,7 +85,7 @@ class TransportationServiceImplTest {
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
-        assertEquals("Istanbul Airport", result.get(0).getOrigin().getName());
+        assertEquals("Istanbul Airport", result.getFirst().getOrigin().getName());
 
         verify(transportationRepository, times(1)).findAll();
     }

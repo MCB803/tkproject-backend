@@ -121,6 +121,10 @@ public class TransportationServiceImpl implements TransportationService {
     @Override
     public void delete(Long id) {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        transportationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transportation not found with id: " + id));
+
         transportationRepository.deleteById(id);
         logger.info("User {} deleted transportation with id: {}", currentUser, id);
     }

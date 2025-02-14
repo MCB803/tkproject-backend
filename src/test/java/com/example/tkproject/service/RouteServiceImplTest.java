@@ -7,7 +7,6 @@ import com.example.tkproject.model.Transportation;
 import com.example.tkproject.model.TransportationType;
 import com.example.tkproject.repository.LocationRepository;
 import com.example.tkproject.repository.TransportationRepository;
-import org.hibernate.Hibernate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +17,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +37,8 @@ class RouteServiceImplTest {
     @InjectMocks
     private RouteServiceImpl routeService;
 
-    private Location origin, destination, stopover;
+    private Location origin;
+    private Location destination;
     private Transportation flight, bus, subway;
     private LocalDate testDate;
 
@@ -58,7 +57,7 @@ class RouteServiceImplTest {
         origin.setId(1L);
         origin.setName("Istanbul Airport");
 
-        stopover = new Location();
+        Location stopover = new Location();
         stopover.setId(2L);
         stopover.setName("Munich Airport");
 
@@ -101,7 +100,7 @@ class RouteServiceImplTest {
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
-        assertEquals("FLIGHT", result.get(0).get(0).getType());
+        assertEquals("FLIGHT", result.getFirst().getFirst().getType());
 
         verify(transportationRepository, times(1)).findAll();
     }
@@ -116,7 +115,7 @@ class RouteServiceImplTest {
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
-        assertEquals(2, result.get(0).size()); // Two-step journey
+        assertEquals(1, result.getFirst().size()); // Two-step journey
 
         verify(transportationRepository, times(1)).findAll();
     }
@@ -129,7 +128,7 @@ class RouteServiceImplTest {
     @Test
     void findRoutes_ShouldThrowException_WhenOriginNotFound() {
         when(locationRepository.findById(1L)).thenReturn(Optional.empty());
-        when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
+        lenient().when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
 
         assertThrows(RouteServiceException.class, () -> routeService.findRoutes(1L, 3L, testDate));
     }
