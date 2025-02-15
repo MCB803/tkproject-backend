@@ -28,6 +28,9 @@ public class CacheConfig {
         org.redisson.spring.cache.CacheConfig transportationCacheConfig = new org.redisson.spring.cache.CacheConfig(60000, 300000);
         config.put("transportationCache", transportationCacheConfig);// TTL = 60000 ms, maxIdleTime = 300000 ms);
 
+        config.put("availableTransportsCache", new org.redisson.spring.cache.CacheConfig(60000, 300000));
+        config.put("adjacencyListCache", new org.redisson.spring.cache.CacheConfig(60000, 300000));
+
         return new RedissonSpringCacheManager(redissonClient, config);
     }
 }

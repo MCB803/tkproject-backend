@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -55,7 +54,6 @@ public class TransportationServiceImpl implements TransportationService {
     @CacheEvict(value = "transportationsCache", allEntries = true)
     @Override
     public TransportationResponseDTO create(TransportationRequestDTO transportationDTO) {
-
         if (transportationDTO.getOriginId().equals(transportationDTO.getDestinationId())) {
             throw new RouteServiceException("Origin and destination must be different!");
         }
@@ -81,13 +79,9 @@ public class TransportationServiceImpl implements TransportationService {
         return TransportationResponseDTO.fromEntity(savedTransportation);
     }
 
-    @Caching(evict = {
-            @CacheEvict(value = "transportationsCache", allEntries = true),
-            @CacheEvict(value = "transportationCache", key = "#id")
-    })
     @Override
+    @CacheEvict(value = "transportationsCache", allEntries = true)
     public TransportationResponseDTO update(Long id, TransportationRequestDTO transportationDTO) {
-
         if (transportationDTO.getOriginId().equals(transportationDTO.getDestinationId())) {
             throw new RouteServiceException("Origin and destination must be different!");
         }
@@ -114,11 +108,8 @@ public class TransportationServiceImpl implements TransportationService {
         return TransportationResponseDTO.fromEntity(updatedTransportation);
     }
 
-    @Caching(evict = {
-            @CacheEvict(value = "transportationsCache", allEntries = true),
-            @CacheEvict(value = "transportationCache", key = "#id")
-    })
     @Override
+    @CacheEvict(value = "transportationsCache", allEntries = true)
     public void delete(Long id) {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
 

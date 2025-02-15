@@ -3,7 +3,6 @@ package com.example.tkproject.controller;
 import com.example.tkproject.dto.ApiResponse;
 import com.example.tkproject.dto.LocationDTO;
 import com.example.tkproject.dto.TransportationResponseDTO;
-import com.example.tkproject.exception.ErrorResponse;
 import com.example.tkproject.service.LocationService;
 import com.example.tkproject.service.RouteService;
 import jakarta.validation.constraints.NotNull;
@@ -17,8 +16,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-@Validated // <-- Add this annotation to enable method-level validation
+@Validated
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/routes")
@@ -36,53 +36,45 @@ public class RouteController {
 
     /**
      * GET endpoint to retrieve valid routes.
-     * Example request: /api/routes?originCode=XXX&destinationCode=YYY&tripDate=2025-03-12
+     * Returns a CompletableFuture for non-blocking behavior.
      */
     @GetMapping
-    public ResponseEntity<?> getRoutes(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<List<TransportationResponseDTO>>>>> getRoutes(
             @RequestParam @NotNull(message = "Origin id must not be blank") Long originId,
             @RequestParam @NotNull(message = "Destination id must not be blank") Long destinationId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tripDate) {
-        try {
-            logger.info("Fetching routes from {} to {} for date {}", originId, destinationId, tripDate);
-            List<List<TransportationResponseDTO>> routes = routeService.findRoutes(originId, destinationId, tripDate);
-            logger.debug("Found {} routes", routes.size());
-            ApiResponse<List<List<TransportationResponseDTO>>> response = new ApiResponse<>(
-                    HttpStatus.OK.value(),
-                    "Routes fetched successfully",
-                    routes
-            );
-            return ResponseEntity.ok(response);
-        } catch (Exception ex) {
-            logger.error("Error fetching routes: {}", ex.getMessage(), ex);
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    "Error fetching routes",
-                    ex.getMessage()
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+
+        logger.info("Fetching routes from {} to {} for date {}", originId, destinationId, tripDate);
+        return routeService.findRoutes(originId, destinationId, tripDate)
+                .thenApply(routes -> {
+                    logger.debug("Found {} routes", routes.size());
+                    ApiResponse<List<List<TransportationResponseDTO>>> response =
+                            new ApiResponse<>(HttpStatus.OK.value(), "Routes fetched successfully", routes);
+                    return ResponseEntity.ok(response);
+                })
+                .exceptionally(ex -> {
+                    logger.error("Error fetching routes: {}", ex.getMessage(), ex);
+                    ApiResponse<List<List<TransportationResponseDTO>>> errorResponse =
+                            new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                                    "Error fetching routes: " + ex.getMessage(), null);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+                });
     }
 
     @GetMapping("/locations")
-    public ResponseEntity<?> getAllLocations() {
+    public ResponseEntity<ApiResponse<List<LocationDTO>>> getAllLocations() {
         try {
             logger.info("Fetching all locations for routes");
             List<LocationDTO> locations = locationService.findAll();
             logger.debug("Found {} locations", locations.size());
-            ApiResponse<List<LocationDTO>> response = new ApiResponse<>(
-                    HttpStatus.OK.value(),
-                    "Locations fetched successfully",
-                    locations
-            );
+            ApiResponse<List<LocationDTO>> response =
+                    new ApiResponse<>(HttpStatus.OK.value(), "Locations fetched successfully", locations);
             return ResponseEntity.ok(response);
         } catch (Exception ex) {
             logger.error("Error fetching locations: {}", ex.getMessage(), ex);
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    "Error fetching locations",
-                    ex.getMessage()
-            );
+            ApiResponse<List<LocationDTO>> errorResponse =
+                    new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                            "Error fetching locations: " + ex.getMessage(), null);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
