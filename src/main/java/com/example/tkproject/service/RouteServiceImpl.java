@@ -4,7 +4,7 @@ import com.example.tkproject.dto.TransportationResponseDTO;
 import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
-import com.example.tkproject.model.TransportationType;
+import com.example.tkproject.model.enums.TransportationType;
 import com.example.tkproject.repository.LocationRepository;
 import com.example.tkproject.repository.TransportationRepository;
 import org.hibernate.Hibernate;
@@ -62,7 +62,7 @@ public class RouteServiceImpl implements RouteService {
      * Caches the list of available transports for the given dayOfWeek.
      */
     @Cacheable(value = "availableTransportsCache", key = "#dayOfWeek")
-    private List<Transportation> getAvailableTransports(int dayOfWeek) {
+    public List<Transportation> getAvailableTransports(int dayOfWeek) {
         logger.debug("Fetching available transports for day {}", dayOfWeek);
         return transportationRepository.findByOperatingDaysContaining(dayOfWeek);
     }
@@ -71,7 +71,7 @@ public class RouteServiceImpl implements RouteService {
      * Caches the adjacency list for the given dayOfWeek.
      */
     @Cacheable(value = "adjacencyListCache", key = "#dayOfWeek")
-    private Map<Long, List<Transportation>> getAdjacencyList(int dayOfWeek) {
+    public Map<Long, List<Transportation>> getAdjacencyList(int dayOfWeek) {
         List<Transportation> availableTransports = getAvailableTransports(dayOfWeek);
         logger.debug("Building adjacency list from {} transports", availableTransports.size());
         return availableTransports.stream()
@@ -82,7 +82,7 @@ public class RouteServiceImpl implements RouteService {
      * Caches the location map for the given dayOfWeek.
      */
     @Cacheable(value = "locationMapCache", key = "#dayOfWeek")
-    private Map<Long, Location> getLocationMap(int dayOfWeek) {
+    public Map<Long, Location> getLocationMap(int dayOfWeek) {
         List<Transportation> availableTransports = getAvailableTransports(dayOfWeek);
         Map<Long, Location> locationMap = new HashMap<>();
         availableTransports.forEach(t -> {
@@ -190,6 +190,10 @@ public class RouteServiceImpl implements RouteService {
                 return dtoRoutes;
             } catch (Exception ex) {
                 logger.error("Error finding routes: {}", ex.getMessage(), ex);
+
+                if (ex instanceof RouteServiceException) {
+                    throw (RouteServiceException) ex;
+                }
                 throw new RouteServiceException("Error finding routes", ex);
             }
         });
@@ -208,10 +212,6 @@ public class RouteServiceImpl implements RouteService {
         return CompletableFuture.completedFuture(result);
     }
 
-    // Validate route pattern:
-    // 1. Direct Flight: single segment that is a flight.
-    // 2. Two segments: one flight (in either position).
-    // 3. Three segments: non-flight, flight, non-flight.
     private boolean isValidRoute(List<Transportation> route) {
         if (route.isEmpty()) {
             return false;
@@ -231,8 +231,6 @@ public class RouteServiceImpl implements RouteService {
         return false;
     }
 
-    // Calculates the distance between two locations using the Haversine formula.
-    // Returns Double.MAX_VALUE if any coordinate is missing.
     private double calculateDistance(Location start, Location end) {
         if (start == null || end == null ||
                 start.getLatitude() == null || start.getLongitude() == null ||
@@ -250,8 +248,6 @@ public class RouteServiceImpl implements RouteService {
         return R * c;
     }
 
-    // Sums the distances of all segments in the route.
-    // Returns Double.MAX_VALUE if any segment is missing valid coordinates.
     private double calculateTotalDistance(List<Transportation> route, Map<Long, Location> locationMap) {
         double total = 0.0;
         for (Transportation t : route) {

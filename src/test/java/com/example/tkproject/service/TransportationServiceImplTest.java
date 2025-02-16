@@ -6,7 +6,7 @@ import com.example.tkproject.exception.ResourceNotFoundException;
 import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.model.Location;
 import com.example.tkproject.model.Transportation;
-import com.example.tkproject.model.TransportationType;
+import com.example.tkproject.model.enums.TransportationType;
 import com.example.tkproject.repository.TransportationRepository;
 import com.example.tkproject.repository.LocationRepository;
 import org.junit.jupiter.api.BeforeEach;

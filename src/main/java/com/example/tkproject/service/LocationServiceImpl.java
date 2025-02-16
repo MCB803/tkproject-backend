@@ -24,7 +24,6 @@ public class LocationServiceImpl implements LocationService {
         this.locationRepository = locationRepository;
     }
 
-    // Retrieve all locations as DTOs with caching
     @Cacheable(value = "locationsCache")
     @Override
     public List<LocationDTO> findAll() {
@@ -40,7 +39,6 @@ public class LocationServiceImpl implements LocationService {
         }
     }
 
-    // Retrieve a single location by ID as DTO
     @Cacheable(value = "locationsCache", key = "#id")
     @Override
     public LocationDTO findById(Long id) {
@@ -50,7 +48,6 @@ public class LocationServiceImpl implements LocationService {
         return LocationDTO.fromEntity(location);
     }
 
-    // Create a new location
     @CacheEvict(value = "locationsCache", allEntries = true)
     @Override
     public LocationDTO create(LocationDTO locationDTO) {
@@ -73,7 +70,6 @@ public class LocationServiceImpl implements LocationService {
         return LocationDTO.fromEntity(savedLocation);
     }
 
-    // Update an existing location
     @CacheEvict(value = "locationsCache", allEntries = true)
     @Override
     public LocationDTO update(Long id, LocationDTO locationDTO) {
@@ -95,7 +91,6 @@ public class LocationServiceImpl implements LocationService {
         return LocationDTO.fromEntity(updatedLocation);
     }
 
-    // Delete a location
     @CacheEvict(value = "locationsCache", allEntries = true)
     @Override
     public void delete(Long id) {

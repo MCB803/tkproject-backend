@@ -23,7 +23,6 @@ public class RedissonConfig {
 
     @Bean
     public RedissonClient redissonClient() {
-        // Build the Redis URI (e.g., redis://localhost:6379)
         String redisUri = "redis://" + redisHost + ":" + redisPort;
         Config config = new Config();
         config.useSingleServer().setAddress(redisUri);
@@ -34,12 +33,12 @@ public class RedissonConfig {
     @Bean(name = "asyncExecutor")
     public Executor asyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);       // Adjust core pool size as needed
-        executor.setMaxPoolSize(50);          // Adjust maximum pool size as needed
-        executor.setQueueCapacity(100);       // Adjust queue capacity as needed
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(50);
+        executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("AsyncRoute-");
         executor.initialize();
-        // Wrap the executor to propagate the SecurityContext to async threads.
+
         return new DelegatingSecurityContextExecutor(executor);
     }
 }

@@ -1,5 +1,6 @@
 package com.example.tkproject.model;
 
+import com.example.tkproject.model.enums.TransportationType;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.HashSet;
@@ -14,7 +15,6 @@ public class Transportation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Many-to-One relationship for origin and destination
     @ManyToOne(optional = false)
     @JoinColumn(name = "origin_id", nullable = false)
     private Location origin;
@@ -32,7 +32,6 @@ public class Transportation {
     @Column(name = "operating_day")
     private Set<Integer> operatingDays = new HashSet<>();
 
-    // Constructors, getters, and setters
     public Transportation() {
     }
 

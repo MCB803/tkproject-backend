@@ -1,7 +1,6 @@
 package com.example.tkproject.controller;
 
 import com.example.tkproject.dto.*;
-import com.example.tkproject.exception.RouteServiceException;
 import com.example.tkproject.service.TransportationService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;

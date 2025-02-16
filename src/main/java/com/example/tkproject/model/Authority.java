@@ -13,7 +13,6 @@ public class Authority implements GrantedAuthority {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // The authority name (for example, ROLE_ADMIN, ROLE_AGENCY)
     @Column(nullable = false, length = 50)
     private String authority;
 

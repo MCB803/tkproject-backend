@@ -32,7 +32,6 @@ public class GlobalExceptionHandler {
     }
 
 
-    // Catch all for other exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {
         logger.error("Unhandled exception: ", ex);
@@ -51,7 +50,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
 
-    // Handle custom RouteServiceException errors
     @ExceptionHandler(RouteServiceException.class)
     public ResponseEntity<ErrorResponse> handleRouteServiceException(RouteServiceException ex) {
         logger.error("Route service error: {}", ex.getMessage(), ex);
@@ -63,7 +61,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // Handle ServiceException
     @ExceptionHandler(AuthenticationServiceException.class)
     public ResponseEntity<ErrorResponse> handleServiceException(AuthenticationServiceException ex) {
         logger.error("Service exception: {}", ex.getMessage(), ex);

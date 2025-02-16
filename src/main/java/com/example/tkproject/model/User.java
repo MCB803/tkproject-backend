@@ -20,13 +20,12 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false, length = 50)
     private String username;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String password;
 
     @Column(nullable = false)
     private boolean enabled = true;
 
-    // One-to-many relationship with authorities (assuming each authority row links to a user by username)
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "username", referencedColumnName = "username")
     private Set<Authority> authorities;

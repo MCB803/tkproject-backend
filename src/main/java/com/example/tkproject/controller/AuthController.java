@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -25,43 +28,36 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtTokenProvider;
+    private final JwtUtil jwtUtil;
 
     @Autowired
-    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtTokenProvider) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
         this.authenticationManager = authenticationManager;
-        this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest loginRequest) {
         logger.info("Login attempt for user: {}", loginRequest.getUsername());
         try {
-            // Attempt to authenticate the user
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getUsername(), loginRequest.getPassword()
-                    )
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
             );
 
             logger.info("User {} authenticated successfully", loginRequest.getUsername());
 
-            // Generate a JWT token
-            String token = jwtTokenProvider.generateToken(authentication);
+            String token = jwtUtil.generateToken(authentication);
 
-            // Extract the first authority (role) from the authentication details
-            String role = authentication.getAuthorities().stream()
+            List<String> roles = authentication.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .findFirst()
-                    .orElse("");
+                    .collect(Collectors.toList());
 
-            logger.debug("Generated token for user {} with role {}", loginRequest.getUsername(), role);
+            String primaryRole = roles.isEmpty() ? "NO_ROLE" : roles.getFirst();
+            logger.debug("Generated token for user {} with role {}", loginRequest.getUsername(), primaryRole);
 
-            // Return the token and role in the response
-            return ResponseEntity.ok(new JwtResponse(token, role));
+            return ResponseEntity.ok(new JwtResponse(token, primaryRole));
         } catch (AuthenticationException ex) {
             logger.error("Authentication failed for user {}: {}", loginRequest.getUsername(), ex.getMessage());
-            // Throw a custom exception; your global exception handler should catch this and return a 401 response.
             throw new AuthenticationFailedException("Invalid username or password", ex);
         }
     }

@@ -19,7 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    // Inject your user repository (that is linked to your user and authorities tables)
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
@@ -34,14 +33,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                     return new UsernameNotFoundException("User not found: " + username);
                 });
 
-        // Map your authorities (assuming user.getAuthorities() returns a collection of Authority)
         List<GrantedAuthority> grantedAuthorities = user.getAuthorities().stream()
-                .map(auth -> {
-                    String authority = auth.getAuthority();
-                    logger.debug("Found authority: {}", authority);
-                    return new SimpleGrantedAuthority(authority);
-                })
+                .map(auth -> new SimpleGrantedAuthority(auth.getAuthority()))
                 .collect(Collectors.toList());
+
 
         logger.info("User {} loaded successfully with {} authorities", username, grantedAuthorities.size());
 
