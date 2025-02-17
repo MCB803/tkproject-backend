@@ -35,7 +35,6 @@ class RouteServiceImplTest {
     @Mock
     private TransportationRepository transportationRepository;
 
-    // Dummy transaction manager – do not change this.
     private static class DummyTransactionManager implements PlatformTransactionManager {
         @Override
         public TransactionStatus getTransaction(TransactionDefinition definition) {
@@ -58,36 +57,26 @@ class RouteServiceImplTest {
     private PlatformTransactionManager transactionManager;
     private RouteServiceImpl routeService;
 
-    // Sample Locations
     private Location origin;
     private Location destination;
-    private Location stopover1; // e.g. Munich
-    private Location stopover2; // e.g. Paris
-
-    // Sample Transportations for valid and invalid routes.
-    // Valid direct flight: origin -> destination.
+    private Location stopover1;
+    private Location stopover2;
     private Transportation directFlight;
-    // For a valid three-segment route: bus, flight, subway.
     private Transportation busOriginToStopover1;
     private Transportation flightStopover1ToStopover2;
     private Transportation subwayStopover2ToDestination;
-    // Invalid patterns:
-    // Flight -> Flight (invalid two-segment route)
     private Transportation flightOriginToStopover1;
     private Transportation flightStopover1ToDestination;
-    // Non-flight -> Non-flight (invalid two-segment route)
     private Transportation busOriginToStopover1_NF;
     private Transportation subwayStopover1ToDestination_NF;
-    // Flight -> Non-flight -> Non-flight (invalid three-segment route)
     private Transportation flightOriginToStopover1_Invalid;
     private Transportation busStopover1ToStopover2_Invalid;
     private Transportation subwayStopover2ToDestination_Invalid;
-    // Non-flight -> Flight -> Flight (invalid three-segment route)
     private Transportation busOriginToStopover1_Invalid;
     private Transportation flightStopover1ToStopover2_Invalid;
     private Transportation flightStopover2ToDestination_Invalid;
 
-    private LocalDate testDate; // Wednesday (dayOfWeek = 3)
+    private LocalDate testDate;
 
     @BeforeEach
     void setUp() {
@@ -97,7 +86,6 @@ class RouteServiceImplTest {
         when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
 
-        // Initialize Locations.
         origin = new Location();
         origin.setId(1L);
         origin.setName("Istanbul Airport");
@@ -114,7 +102,6 @@ class RouteServiceImplTest {
         destination.setId(3L);
         destination.setName("London Heathrow");
 
-        // Valid direct flight.
         directFlight = new Transportation();
         directFlight.setId(10L);
         directFlight.setType(TransportationType.FLIGHT);
@@ -122,7 +109,6 @@ class RouteServiceImplTest {
         directFlight.setOrigin(origin);
         directFlight.setDestination(destination);
 
-        // Valid three-segment route: non-flight → flight → non-flight.
         busOriginToStopover1 = new Transportation();
         busOriginToStopover1.setId(20L);
         busOriginToStopover1.setType(TransportationType.BUS);
@@ -144,7 +130,6 @@ class RouteServiceImplTest {
         subwayStopover2ToDestination.setOrigin(stopover2);
         subwayStopover2ToDestination.setDestination(destination);
 
-        // Invalid: Flight -> Flight (two segments)
         flightOriginToStopover1 = new Transportation();
         flightOriginToStopover1.setId(50L);
         flightOriginToStopover1.setType(TransportationType.FLIGHT);
@@ -159,7 +144,6 @@ class RouteServiceImplTest {
         flightStopover1ToDestination.setOrigin(stopover1);
         flightStopover1ToDestination.setDestination(destination);
 
-        // Invalid: Non-flight -> Non-flight (two segments)
         busOriginToStopover1_NF = new Transportation();
         busOriginToStopover1_NF.setId(70L);
         busOriginToStopover1_NF.setType(TransportationType.BUS);
@@ -174,7 +158,6 @@ class RouteServiceImplTest {
         subwayStopover1ToDestination_NF.setOrigin(stopover1);
         subwayStopover1ToDestination_NF.setDestination(destination);
 
-        // Invalid: Flight -> Non-flight -> Non-flight (three segments)
         flightOriginToStopover1_Invalid = new Transportation();
         flightOriginToStopover1_Invalid.setId(90L);
         flightOriginToStopover1_Invalid.setType(TransportationType.FLIGHT);
@@ -196,7 +179,6 @@ class RouteServiceImplTest {
         subwayStopover2ToDestination_Invalid.setOrigin(stopover2);
         subwayStopover2ToDestination_Invalid.setDestination(destination);
 
-        // Invalid: Non-flight -> Flight -> Flight (three segments)
         busOriginToStopover1_Invalid = new Transportation();
         busOriginToStopover1_Invalid.setId(120L);
         busOriginToStopover1_Invalid.setType(TransportationType.BUS);
@@ -218,13 +200,10 @@ class RouteServiceImplTest {
         flightStopover2ToDestination_Invalid.setOrigin(stopover2);
         flightStopover2ToDestination_Invalid.setDestination(destination);
 
-        // Test date: Wednesday (dayOfWeek = 3).
         testDate = LocalDate.of(2025, 2, 19);
 
-        // Instantiate our dummy transaction manager.
         transactionManager = new DummyTransactionManager();
 
-        // Initialize the service with our mocks and dummy transaction manager.
         routeService = new RouteServiceImpl(locationRepository, transportationRepository, transactionManager);
     }
 
@@ -232,7 +211,6 @@ class RouteServiceImplTest {
     void findRoutes_ShouldReturnDirectFlight() {
         when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
         when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
-        // Return only the direct flight.
         when(transportationRepository.findByOperatingDaysContaining(3))
                 .thenReturn(List.of(directFlight));
 
@@ -248,7 +226,6 @@ class RouteServiceImplTest {
 
     @Test
     void findRoutes_ShouldReturnEmptyList_ForInvalidRoute_FlightFlight() {
-        // Invalid two-segment route: Flight -> Flight.
         when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
         when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
         when(transportationRepository.findByOperatingDaysContaining(3))
@@ -260,7 +237,6 @@ class RouteServiceImplTest {
 
     @Test
     void findRoutes_ShouldReturnEmptyList_ForInvalidRoute_NonFlightNonFlight() {
-        // Invalid two-segment route: Non-flight -> Non-flight.
         when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
         when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
         when(transportationRepository.findByOperatingDaysContaining(3))
@@ -272,10 +248,8 @@ class RouteServiceImplTest {
 
     @Test
     void findRoutes_ShouldReturnEmptyList_ForInvalidRoute_FlightNonFlightNonFlight() {
-        // Invalid three-segment route: Flight -> Non-flight -> Non-flight.
         when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
         when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
-        // Data: flightOriginToStopover1_Invalid, busStopover1ToStopover2_Invalid, subwayStopover2ToDestination_Invalid.
         when(transportationRepository.findByOperatingDaysContaining(3))
                 .thenReturn(List.of(flightOriginToStopover1_Invalid, busStopover1ToStopover2_Invalid, subwayStopover2ToDestination_Invalid));
         List<List<TransportationResponseDTO>> result = routeService.findRoutes(1L, 3L, testDate).join();
@@ -285,10 +259,8 @@ class RouteServiceImplTest {
 
     @Test
     void findRoutes_ShouldReturnEmptyList_ForInvalidRoute_NonFlightFlightFlight() {
-        // Invalid three-segment route: Non-flight -> Flight -> Flight.
         when(locationRepository.findById(1L)).thenReturn(Optional.of(origin));
         when(locationRepository.findById(3L)).thenReturn(Optional.of(destination));
-        // Data: busOriginToStopover1_Invalid, flightStopover1ToStopover2_Invalid, flightStopover2ToDestination_Invalid.
         lenient().when(locationRepository.findById(2L)).thenReturn(Optional.of(stopover1));
         lenient().when(locationRepository.findById(4L)).thenReturn(Optional.of(stopover2));
         when(transportationRepository.findByOperatingDaysContaining(3))

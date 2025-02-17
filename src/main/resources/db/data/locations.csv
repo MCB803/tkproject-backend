@@ -1,0 +1,16 @@
+id,name,country,city,location_code,latitude,longitude
+4,"Charles de Gaulle Airport","France","Paris","CDG",NULL,NULL
+5,"Narita International Airport","Japan","Tokyo","NRT",NULL,NULL
+6,"Frankfurt Airport","Germany","Frankfurt","FRA",NULL,NULL
+7,"Dubai International Airport","UAE","Dubai","DXB",NULL,NULL
+8,"Port Authority Bus Terminal","USA","New York","PA_NY",NULL,NULL
+9,"Santa Monica Pier","USA","Santa Monica","SMP",NULL,NULL
+11,"Times Square","USA","New York","TSNY",NULL,NULL
+44,"Eiffel Tower","FR","Paris","",NULL,NULL
+49,"Istanbul Airport","Turkey","Istanbul","IST",41.2753,28.7519
+3,"Heathrow Airport","UK","London","LHR",51.47,-0.4543
+12,"Taksim Square","TUR","Istanbul","TSTR",41.036945,28.985832
+48,"Wembley Stadium","UK","London","",51.555973,-0.279672
+46,"Bursa Yenisehir Airport","Turkey","Bursa","YEI",NULL,NULL
+50,"Ordu Giresun Airport","Turkey","Ordu","OGU",NULL,NULL
+2,"Los Angeles International Airport","USA","Los Angeles","LAX",NULL,NULL

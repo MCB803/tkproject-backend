@@ -2,38 +2,138 @@
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="
-         http://www.liquibase.org/xml/ns/dbchangelog
-         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="1" author="yourname">
+    <changeSet id="1" author="mert">
+        <sql>CREATE SCHEMA IF NOT EXISTS security;</sql>
+    </changeSet>
+
+    <changeSet id="2" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="locations_id_seq" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="locations_id_seq" schemaName="public"/>
+    </changeSet>
+
+    <changeSet id="3" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="transportations_id_seq" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="transportations_id_seq" schemaName="public"/>
+    </changeSet>
+
+    <changeSet id="4" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="users_id_seq" schemaName="security"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="users_id_seq" schemaName="security"/>
+    </changeSet>
+
+    <changeSet id="5" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="authorities_id_seq" schemaName="security"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="authorities_id_seq" schemaName="security"/>
+    </changeSet>
+
+    <changeSet id="6" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="databasechangelog" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createTable tableName="databasechangelog" schemaName="public">
+            <column name="id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="filename" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dateexecuted" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="orderexecuted" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="exectype" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="md5sum" type="VARCHAR(35)"/>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="comments" type="VARCHAR(255)"/>
+            <column name="tag" type="VARCHAR(255)"/>
+            <column name="liquibase" type="VARCHAR(20)"/>
+            <column name="contexts" type="VARCHAR(255)"/>
+            <column name="labels" type="VARCHAR(255)"/>
+            <column name="deployment_id" type="VARCHAR(10)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="7" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="databasechangeloglock" schemaName="public"/>
+            </not>
+        </preConditions>
+        <createTable tableName="databasechangeloglock" schemaName="public">
+            <column name="id" type="INTEGER">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="locked" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lockgranted" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="lockedby" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="8" author="mert" runOnChange="true">
         <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="locations" schemaName="public"/>
             </not>
         </preConditions>
         <createTable tableName="locations" schemaName="public">
-            <column name="id" type="BIGINT" autoIncrement="true">
+            <column name="id" type="INTEGER" defaultValueSequenceNext="locations_id_seq">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="name" type="VARCHAR(255)"/>
-            <column name="country" type="VARCHAR(255)"/>
-            <column name="city" type="VARCHAR(255)"/>
-            <column name="location_code" type="VARCHAR(10)">
+            <column name="name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
+            <column name="country" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="city" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="location_code" type="VARCHAR(10)">
+                <constraints unique="true"/>
+            </column>
+            <column name="latitude" type="NUMERIC(9,6)"/>
+            <column name="longitude" type="NUMERIC(9,6)"/>
         </createTable>
     </changeSet>
 
-    <!-- Similarly for the 'transportations' table -->
-    <changeSet id="2" author="yourname">
+    <changeSet id="9" author="mert" runOnChange="true">
         <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="transportations" schemaName="public"/>
             </not>
         </preConditions>
         <createTable tableName="transportations" schemaName="public">
-            <column name="id" type="BIGINT" autoIncrement="true">
+            <column name="id" type="INTEGER" defaultValueSequenceNext="transportations_id_seq">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="origin_id" type="BIGINT">
@@ -46,26 +146,9 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint
-                baseTableName="transportations"
-                baseColumnNames="origin_id"
-                referencedTableName="locations"
-                referencedColumnNames="id"
-                constraintName="fk_transportation_origin"
-                baseSchemaName="public"
-                referencedSchemaName="public"/>
-        <addForeignKeyConstraint
-                baseTableName="transportations"
-                baseColumnNames="destination_id"
-                referencedTableName="locations"
-                referencedColumnNames="id"
-                constraintName="fk_transportation_destination"
-                baseSchemaName="public"
-                referencedSchemaName="public"/>
     </changeSet>
 
-    <!-- And for the 'transportation_operating_days' table -->
-    <changeSet id="3" author="yourname">
+    <changeSet id="10" author="mert" runOnChange="true">
         <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="transportation_operating_days" schemaName="public"/>
@@ -75,23 +158,108 @@
             <column name="transportation_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="operating_day" type="INT">
+            <column name="operating_day" type="INTEGER">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addPrimaryKey
-                tableName="transportation_operating_days"
-                schemaName="public"
-                columnNames="transportation_id, operating_day"
-                constraintName="pk_operating_days"/>
-        <addForeignKeyConstraint
-                baseTableName="transportation_operating_days"
-                baseColumnNames="transportation_id"
-                referencedTableName="transportations"
-                referencedColumnNames="id"
-                constraintName="fk_operating_days_transportation"
-                baseSchemaName="public"
-                referencedSchemaName="public"/>
     </changeSet>
+
+    <changeSet id="13" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE constraint_name = 'pk_transportation_operating_days'
+                  AND table_schema = 'public'
+                  AND table_name = 'transportation_operating_days'
+                  AND constraint_type = 'PRIMARY KEY';
+            </sqlCheck>
+            <not>
+                <primaryKeyExists tableName="transportation_operating_days" schemaName="public"/>
+            </not>
+        </preConditions>
+        <addPrimaryKey tableName="transportation_operating_days"
+                       columnNames="transportation_id, operating_day"
+                       constraintName="pk_transportation_operating_days"
+                       schemaName="public"/>
+    </changeSet>
+
+    <changeSet id="14" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE constraint_name = 'fk_transportation_origin'
+                  AND table_schema = 'public';
+            </sqlCheck>
+        </preConditions>
+        <addForeignKeyConstraint baseTableSchemaName="public"
+                                 baseTableName="transportations"
+                                 baseColumnNames="origin_id"
+                                 constraintName="fk_transportation_origin"
+                                 referencedTableSchemaName="public"
+                                 referencedTableName="locations"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="15" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE constraint_name = 'fk_transportation_destination'
+                  AND table_schema = 'public';
+            </sqlCheck>
+        </preConditions>
+        <addForeignKeyConstraint baseTableSchemaName="public"
+                                 baseTableName="transportations"
+                                 baseColumnNames="destination_id"
+                                 constraintName="fk_transportation_destination"
+                                 referencedTableSchemaName="public"
+                                 referencedTableName="locations"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="16" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE constraint_name = 'fk_operating_days_transportation'
+                  AND table_schema = 'public';
+            </sqlCheck>
+        </preConditions>
+        <addForeignKeyConstraint baseTableSchemaName="public"
+                                 baseTableName="transportation_operating_days"
+                                 baseColumnNames="transportation_id"
+                                 constraintName="fk_operating_days_transportation"
+                                 referencedTableSchemaName="public"
+                                 referencedTableName="transportations"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="17" author="mert" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE constraint_name = 'fk_user_authority'
+                  AND table_schema = 'security';
+            </sqlCheck>
+        </preConditions>
+        <addForeignKeyConstraint baseTableSchemaName="security"
+                                 baseTableName="authorities"
+                                 baseColumnNames="username"
+                                 constraintName="fk_user_authority"
+                                 referencedTableSchemaName="security"
+                                 referencedTableName="users"
+                                 referencedColumnNames="username"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <include file="db/changelog/db.changelog-testdata.xml"/>
 
 </databaseChangeLog>

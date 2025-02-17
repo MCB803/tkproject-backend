@@ -25,7 +25,6 @@ public class Location {
     @Column
     private Double longitude;
 
-    // Constructors, getters, and setters
     public Location() {
     }
 
@@ -37,8 +36,6 @@ public class Location {
     }
 
 
-    // For simplicity in comparisons in our route logic,
-    // we assume that two Location objects are equal if their locationCode is equal.
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

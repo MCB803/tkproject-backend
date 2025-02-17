@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="load-locations-data" author="system" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM public.locations;
+            </sqlCheck>
+        </preConditions>
+        <loadData tableName="locations" file="db/data/locations.csv">
+            <column name="id" type="NUMERIC"/>
+            <column name="name" type="STRING"/>
+            <column name="country" type="STRING"/>
+            <column name="city" type="STRING"/>
+            <column name="location_code" type="STRING"/>
+            <column name="latitude" type="NUMERIC"/>
+            <column name="longitude" type="NUMERIC"/>
+        </loadData>
+    </changeSet>
+
+    <changeSet id="load-transportations-data" author="system" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM public.transportations;
+            </sqlCheck>
+        </preConditions>
+        <loadData tableName="transportations" file="db/data/transportations.csv">
+            <column name="id" type="NUMERIC"/>
+            <column name="origin_id" type="NUMERIC"/>
+            <column name="destination_id" type="NUMERIC"/>
+            <column name="type" type="STRING"/>
+        </loadData>
+    </changeSet>
+
+    <changeSet id="load-operating-days-data" author="system" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM public.transportation_operating_days;
+            </sqlCheck>
+        </preConditions>
+        <loadData tableName="transportation_operating_days" file="db/data/transportation_operating_days.csv">
+            <column name="transportation_id" type="NUMERIC"/>
+            <column name="operating_day" type="NUMERIC"/>
+        </loadData>
+    </changeSet>
+
+    <changeSet id="load-users-data" author="system" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM security.users;
+            </sqlCheck>
+        </preConditions>
+        <loadData tableName="security.users" file="db/data/users.csv">
+            <column name="id" type="NUMERIC"/>
+            <column name="username" type="STRING"/>
+            <column name="password" type="STRING"/>
+            <column name="enabled" type="BOOLEAN"/>
+        </loadData>
+    </changeSet>
+
+    <changeSet id="load-authorities-data" author="system" runOnChange="true">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM security.authorities;
+            </sqlCheck>
+        </preConditions>
+        <loadData tableName="security.authorities" file="db/data/authorities.csv">
+            <column name="id" type="NUMERIC"/>
+            <column name="username" type="STRING"/>
+            <column name="authority" type="STRING"/>
+        </loadData>
+    </changeSet>
+
+</databaseChangeLog>

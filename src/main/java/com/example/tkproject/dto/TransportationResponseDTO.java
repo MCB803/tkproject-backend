@@ -14,8 +14,8 @@ import java.util.Set;
 @NoArgsConstructor
 public class TransportationResponseDTO {
     private Long id;
-    private LocationDTO origin;      // Includes name, country, city, locationCode
-    private LocationDTO destination; // Includes name, country, city, locationCode
+    private LocationDTO origin;
+    private LocationDTO destination;
     private String type;
     private Set<Integer> operatingDays;
 
@@ -26,10 +26,10 @@ public class TransportationResponseDTO {
 
         return new TransportationResponseDTO(
                 transportation.getId(),
-                LocationDTO.fromEntity(transportation.getOrigin()),  // Convert origin location
-                LocationDTO.fromEntity(transportation.getDestination()),  // Convert destination location
+                LocationDTO.fromEntity(transportation.getOrigin()),
+                LocationDTO.fromEntity(transportation.getDestination()),
                 transportation.getType().toString(),
-                transportation.getOperatingDays() != null ? new HashSet<>(transportation.getOperatingDays()) : Collections.emptySet() // Ensure it's initialized
+                transportation.getOperatingDays() != null ? new HashSet<>(transportation.getOperatingDays()) : Collections.emptySet()
         );
     }
 

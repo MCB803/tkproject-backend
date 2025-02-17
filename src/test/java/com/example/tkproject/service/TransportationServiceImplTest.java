@@ -44,7 +44,6 @@ class TransportationServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Mock authentication
         Authentication authentication = mock(Authentication.class);
         lenient().when(authentication.getName()).thenReturn("testUser");
 
@@ -52,7 +51,6 @@ class TransportationServiceImplTest {
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        // Create mock locations
         origin = new Location();
         origin.setId(1L);
         origin.setName("Istanbul Airport");
@@ -61,7 +59,6 @@ class TransportationServiceImplTest {
         destination.setId(2L);
         destination.setName("London Heathrow");
 
-        // Create mock transportation
         transportation = new Transportation();
         transportation.setId(10L);
         transportation.setType(TransportationType.FLIGHT);
@@ -69,7 +66,6 @@ class TransportationServiceImplTest {
         transportation.setOrigin(origin);
         transportation.setDestination(destination);
 
-        // Create request DTO
         requestDTO = new TransportationRequestDTO();
         requestDTO.setOriginId(1L);
         requestDTO.setDestinationId(2L);
@@ -128,7 +124,7 @@ class TransportationServiceImplTest {
 
     @Test
     void create_ShouldThrowException_WhenOriginAndDestinationAreSame() {
-        requestDTO.setDestinationId(1L); // Same as origin
+        requestDTO.setDestinationId(1L);
 
         assertThrows(RouteServiceException.class, () -> transportationService.create(requestDTO));
     }

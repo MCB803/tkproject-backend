@@ -37,7 +37,6 @@ class LocationServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Mock authentication
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 "admin", "adminpass",
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
@@ -46,11 +45,10 @@ class LocationServiceImplTest {
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        // Sample location setup
         location = new Location("Istanbul Airport", "Turkey", "Istanbul", "IST");
         location.setId(1L);
-        location.setLatitude(41.275); // Mocked lat
-        location.setLongitude(28.751); // Mocked lng
+        location.setLatitude(41.275);
+        location.setLongitude(28.751);
 
         locationDTO = new LocationDTO(1L, "Istanbul Airport", "Turkey", "Istanbul", "IST", 41.275, 28.751);
     }

@@ -38,10 +38,9 @@ public class RouteServiceImpl implements RouteService {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    // State for the Dijkstra-style search.
     private static class RouteState implements Comparable<RouteState> {
         final Long locationId;
-        final double distance; // cumulative distance
+        final double distance;
         final List<Transportation> route;
         final int flightCount;
 
@@ -78,9 +77,6 @@ public class RouteServiceImpl implements RouteService {
                 .collect(Collectors.groupingBy(t -> t.getOrigin().getId()));
     }
 
-    /**
-     * Caches the location map for the given dayOfWeek.
-     */
     @Cacheable(value = "locationMapCache", key = "#dayOfWeek")
     public Map<Long, Location> getLocationMap(int dayOfWeek) {
         List<Transportation> availableTransports = getAvailableTransports(dayOfWeek);
@@ -92,11 +88,6 @@ public class RouteServiceImpl implements RouteService {
         return locationMap;
     }
 
-    /**
-     * Synchronous method that performs route finding and converts the results to DTOs.
-     * All processing—including lazy initialization and DTO conversion—is performed inside
-     * a programmatic transaction to guarantee that the Hibernate session remains active.
-     */
     @Override
     @Cacheable(value = "routesCache", key = "#originId + '_' + #destinationId + '_' + #tripDate")
     public List<List<TransportationResponseDTO>> findRoutesSync(Long originId, Long destinationId, LocalDate tripDate) {
@@ -111,32 +102,26 @@ public class RouteServiceImpl implements RouteService {
 
                 int dayOfWeek = tripDate.getDayOfWeek().getValue();
 
-                // Fetch and validate origin and destination locations.
                 Location origin = locationRepository.findById(originId)
                         .orElseThrow(() -> new RouteServiceException("Origin not found with ID: " + originId));
                 Location destination = locationRepository.findById(destinationId)
                         .orElseThrow(() -> new RouteServiceException("Destination not found with ID: " + destinationId));
 
-                // Use cached structures.
                 List<Transportation> availableTransports = getAvailableTransports(dayOfWeek);
                 logger.debug("Total transportation records found for day {}: {}", dayOfWeek, availableTransports.size());
 
                 Map<Long, List<Transportation>> adjacencyList = getAdjacencyList(dayOfWeek);
                 Map<Long, Location> locationMap = getLocationMap(dayOfWeek);
-                // Ensure origin and destination are present.
                 locationMap.putIfAbsent(origin.getId(), origin);
                 locationMap.putIfAbsent(destination.getId(), destination);
 
-                // Dijkstra's algorithm–style search initialization.
                 PriorityQueue<RouteState> pq = new PriorityQueue<>();
                 List<List<Transportation>> validRoutes = new ArrayList<>();
                 pq.offer(new RouteState(originId, 0.0, new ArrayList<>(), 0));
 
-                // Explore possible routes (allowing up to 3 segments).
                 while (!pq.isEmpty()) {
                     RouteState current = pq.poll();
 
-                    // If destination reached, check route validity.
                     if (current.locationId.equals(destinationId)) {
                         if (isValidRoute(current.route)) {
                             validRoutes.add(new ArrayList<>(current.route));
@@ -144,14 +129,12 @@ public class RouteServiceImpl implements RouteService {
                         continue;
                     }
 
-                    // Limit routes to at most 3 segments.
                     if (current.route.size() >= 3) {
                         continue;
                     }
 
                     List<Transportation> nextTransports = adjacencyList.getOrDefault(current.locationId, Collections.emptyList());
                     for (Transportation t : nextTransports) {
-                        // Do not exceed one flight in a route.
                         int newFlightCount = current.flightCount + (t.getType() == TransportationType.FLIGHT ? 1 : 0);
                         if (newFlightCount > 1) {
                             continue;
@@ -164,7 +147,6 @@ public class RouteServiceImpl implements RouteService {
                     }
                 }
 
-                // Sort routes by total distance.
                 validRoutes.sort((r1, r2) -> {
                     double d1 = calculateTotalDistance(r1, locationMap);
                     double d2 = calculateTotalDistance(r2, locationMap);
@@ -172,15 +154,12 @@ public class RouteServiceImpl implements RouteService {
                 });
                 logger.info("Total valid routes found: {}", validRoutes.size());
 
-                // Force initialization of lazy collections while the transaction is active.
                 validRoutes.forEach(route -> route.forEach(t -> {
                     if (t.getOperatingDays() != null) {
                         Hibernate.initialize(t.getOperatingDays());
                     }
                 }));
 
-                // *** Perform DTO conversion inside the transaction ***
-                // Optionally, you could use parallel streams here if DTO conversion becomes CPU-bound.
                 List<List<TransportationResponseDTO>> dtoRoutes = validRoutes.stream()
                         .map(route -> route.stream()
                                 .map(TransportationResponseDTO::fromEntity)
@@ -199,11 +178,7 @@ public class RouteServiceImpl implements RouteService {
         });
     }
 
-    /**
-     * Asynchronous wrapper for route-finding.
-     * Since findRoutesSync fully handles DTO conversion inside a transaction,
-     * this method simply delegates to it.
-     */
+
     @Override
     @Async("asyncExecutor")
     public CompletableFuture<List<List<TransportationResponseDTO>>> findRoutes(Long originId, Long destinationId, LocalDate tripDate) {
@@ -237,7 +212,7 @@ public class RouteServiceImpl implements RouteService {
                 end.getLatitude() == null || end.getLongitude() == null) {
             return Double.MAX_VALUE;
         }
-        final int R = 6371; // Earth's radius in kilometers
+        final int R = 6371;
         double dLat = Math.toRadians(end.getLatitude() - start.getLatitude());
         double dLon = Math.toRadians(end.getLongitude() - start.getLongitude());
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +

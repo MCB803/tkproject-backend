@@ -54,7 +54,6 @@ public class LocationServiceImpl implements LocationService {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
         logger.info("User {} is creating a new location: {}", currentUser, locationDTO);
 
-        // Convert DTO to entity
         Location location = new Location();
         location.setName(locationDTO.getName());
         location.setCountry(locationDTO.getCountry());

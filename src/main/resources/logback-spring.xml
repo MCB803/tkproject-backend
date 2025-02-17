@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- Define properties for file location and log patterns -->
     <property name="LOG_HOME" value="logs" />
     <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n" />
     <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n" />
 
-    <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
         </encoder>
     </appender>
 
-    <!-- File Appender -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_HOME}/application.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- Roll daily and keep 30 days -->
             <fileNamePattern>${LOG_HOME}/application.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
         </rollingPolicy>
@@ -26,13 +22,11 @@
         </encoder>
     </appender>
 
-    <!-- Root logger configuration -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
 
-    <!-- Optionally, set the logging level for your project packages -->
     <logger name="com.example.tkproject" level="DEBUG"/>
 
 </configuration>
